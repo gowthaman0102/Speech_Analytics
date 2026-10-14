@@ -8,9 +8,8 @@ import {
   ChevronRight,
   MessageSquareQuote,
   Sparkles,
-  Percent,
-  ShieldCheck,
-  Activity,
+  Gauge,
+  HeartHandshake,
 } from 'lucide-react';
 import { evaluationApi } from '../api/evaluationApi';
 import type { EvaluationDetail, FeatureTimeSeries, FlawSegment, PlaybackRequest } from '../types';
@@ -170,6 +169,40 @@ export const ResultsPage: React.FC = () => {
 
   const { summary } = evaluation;
 
+  // Derived speaker-friendly coaching metrics
+  const sentencesList = evaluation.sentences || [];
+
+  const wpms = sentencesList
+    .map((s) => s.actual_prosody?.speech_rate_wpm)
+    .filter((w): w is number => typeof w === 'number' && w > 0);
+
+  const totalWords = evaluation.transcript
+    ? evaluation.transcript.trim().split(/\s+/).filter(Boolean).length
+    : 0;
+  const durationMin = (evaluation.participantDuration || 0) / 60;
+  const fallbackWpm = durationMin > 0 && totalWords > 0 ? Math.round(totalWords / durationMin) : 145;
+
+  const avgWpm = wpms.length > 0
+    ? Math.round(wpms.reduce((a, b) => a + b, 0) / wpms.length)
+    : fallbackWpm;
+
+  const paceLabel = avgWpm > 165 ? 'Brisk tempo' : avgWpm < 125 ? 'Deliberate tempo' : 'Optimal pace';
+  const paceBadgeVariant = avgWpm > 165 ? 'warning' : avgWpm < 125 ? 'default' : 'success';
+
+  // Semantic intent and emotional tone match
+  const compScores = sentencesList
+    .map((s) => s.compatibility_score)
+    .filter((c): c is number => typeof c === 'number' && !isNaN(c));
+
+  const toneMatchPct = compScores.length > 0
+    ? Math.round(compScores.reduce((a, b) => a + b, 0) / compScores.length)
+    : Math.round(summary.similarity || 65);
+
+  const sentenceCount = sentencesList.length > 0
+    ? sentencesList.length
+    : (evaluation.transcript ? evaluation.transcript.split(/[.!?]+/).filter((s) => s.trim().length > 0).length : 1);
+  const speechDurationSec = Math.round(evaluation.participantDuration || 0);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 text-left">
       {/* Breadcrumb & Action Header */}
@@ -220,7 +253,7 @@ export const ResultsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Top Stat Row: Solid Terracotta Overall Score Tile + 3 White Cards */}
+      {/* Top Stat Row: Solid Terracotta Overall Score Tile + 3 Plain-Language Coaching Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Overall Score Tile: Solid Terracotta Background */}
         <div className="p-6 rounded-2xl bg-accent text-white flex flex-col justify-between shadow-[0_1px_0_rgba(120,80,40,0.08)]">
@@ -238,7 +271,7 @@ export const ResultsPage: React.FC = () => {
               <span className="text-base font-bold text-white/80">/ 100</span>
             </div>
             <p className="text-xs text-white/80 mt-1 leading-normal">
-              Composite delivery rubric across all 6 analytical dimensions.
+              Composite delivery score across vocal dynamics and expressive intent.
             </p>
           </div>
           <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
@@ -249,71 +282,90 @@ export const ResultsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 3 White Analytic Tiles */}
-        <Card className="p-6 flex flex-col justify-between">
+        {/* Card 2: Speaking Pace */}
+        <Card className="p-6 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-text-muted">
-              Pacing & alignment
+              Speaking pace
             </span>
-            <Percent className="w-4 h-4 text-teal" />
+            <Gauge className="w-4 h-4 text-teal" />
           </div>
           <div className="my-4">
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-baseline gap-2 flex-wrap">
               <span className="text-3xl font-extrabold text-text tabular-nums">
-                {summary.similarity}%
+                {avgWpm}
               </span>
+              <span className="text-xs font-bold text-text-muted">WPM</span>
+              <Badge variant={paceBadgeVariant} size="sm">
+                {paceLabel}
+              </Badge>
             </div>
-            <p className="text-xs text-text-muted mt-1 leading-normal">
-              Cadence and syllable tempo alignment with reference model.
+            <p className="text-xs text-text-muted mt-1.5 leading-normal">
+              Average words per minute across phrases (recommended range: 135–155 WPM).
             </p>
           </div>
           <div className="w-full bg-surface-2 h-2 rounded-full overflow-hidden border border-border">
-            <div className="bg-teal h-full rounded-full" style={{ width: `${summary.similarity}%` }} />
+            <div
+              className="bg-teal h-full rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, Math.round((avgWpm / 220) * 100))}%` }}
+            />
           </div>
         </Card>
 
-        <Card className="p-6 flex flex-col justify-between">
+        {/* Card 3: Tone & Emotional Match */}
+        <Card className="p-6 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-text-muted">
-              Confidence
+              Tone & intent match
             </span>
-            <ShieldCheck className="w-4 h-4 text-success" />
+            <HeartHandshake className="w-4 h-4 text-accent" />
           </div>
           <div className="my-4">
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-baseline gap-2 flex-wrap">
               <span className="text-3xl font-extrabold text-text tabular-nums">
-                {summary.confidence}%
+                {toneMatchPct}%
               </span>
+              {evaluation.detectedSpeakingStyle && (
+                <Badge variant="teal" size="sm">
+                  {evaluation.detectedSpeakingStyle}
+                </Badge>
+              )}
             </div>
-            <p className="text-xs text-text-muted mt-1 leading-normal">
-              Word recognition density and timestamp alignment fidelity.
+            <p className="text-xs text-text-muted mt-1.5 leading-normal">
+              How naturally vocal energy and pitch modulation matched each sentence's meaning.
             </p>
           </div>
           <div className="w-full bg-surface-2 h-2 rounded-full overflow-hidden border border-border">
-            <div className="bg-success h-full rounded-full" style={{ width: `${summary.confidence}%` }} />
+            <div
+              className="bg-accent h-full rounded-full transition-all duration-500"
+              style={{ width: `${toneMatchPct}%` }}
+            />
           </div>
         </Card>
 
-        <Card className="p-6 flex flex-col justify-between">
+        {/* Card 4: Flow & Structure */}
+        <Card className="p-6 flex flex-col justify-between text-left">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-text-muted">
-              Flagged moments
+              Speech structure & flow
             </span>
-            <Activity className="w-4 h-4 text-accent" />
+            <Layers className="w-4 h-4 text-text" />
           </div>
           <div className="my-4">
             <div className="flex items-baseline gap-1.5">
               <span className="text-3xl font-extrabold text-text tabular-nums">
-                {evaluation.flaws.length}
+                {sentenceCount}
               </span>
+              <span className="text-xs font-bold text-text-muted">Thought groups</span>
             </div>
-            <p className="text-xs text-text-muted mt-1 leading-normal">
-              Distinct timestamps with noticeable delivery difference.
+            <p className="text-xs text-text-muted mt-1.5 leading-normal">
+              {totalWords > 0 ? `${totalWords} words spoken across ` : ''}
+              {speechDurationSec}s total duration.
             </p>
           </div>
-          <div className="text-xs font-semibold text-text-muted">
-            {evaluation.flaws.filter((f) => f.severity === 'HIGH').length} High •{' '}
-            {evaluation.flaws.filter((f) => f.severity === 'MEDIUM').length} Medium
+          <div className="text-xs font-semibold text-text-muted flex items-center justify-between pt-1 border-t border-border/60">
+            <span>Focus area:</span>
+            <strong className="text-accent">{summary.weakestArea || 'Pitch Modulation'}</strong>
           </div>
         </Card>
       </div>

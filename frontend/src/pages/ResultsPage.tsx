@@ -16,8 +16,6 @@ import { evaluationApi } from '../api/evaluationApi';
 import type { EvaluationDetail, FeatureTimeSeries, FlawSegment, PlaybackRequest } from '../types';
 import { WaveformComparison } from '../components/WaveformComparison';
 import { FeatureChart } from '../components/FeatureChart';
-import { FlawTimeline } from '../components/FlawTimeline';
-import { FlawCard } from '../components/FlawCard';
 import { RubricCard } from '../components/RubricCard';
 import { TranscriptViewer } from '../components/TranscriptViewer';
 import { SentenceAnalysisView } from '../components/SentenceAnalysisView';
@@ -377,41 +375,6 @@ export const ResultsPage: React.FC = () => {
         </section>
       )}
 
-      {/* Two-Pane Flaw Explorer */}
-      <section aria-label="Flaw inspector" className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-text tracking-tight">
-            Flagged moments & coaching advice
-          </h2>
-          <span className="text-xs text-text-muted hidden sm:inline font-medium">
-            Use <kbd className="px-1.5 py-0.5 rounded-md bg-surface-2 border border-border text-xs font-semibold">[</kbd> and <kbd className="px-1.5 py-0.5 rounded-md bg-surface-2 border border-border text-xs font-semibold">]</kbd> keys to cycle moments
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-5">
-            <FlawTimeline
-              flaws={evaluation.flaws}
-              selectedFlawId={selectedFlaw?.id}
-              onSelectFlaw={handleSelectFlaw}
-            />
-          </div>
-
-          <div className="lg:col-span-7">
-            {selectedFlaw ? (
-              <FlawCard
-                flaw={selectedFlaw}
-                onPlayTimestamp={(t) => handleSeek(t, selectedFlaw.end)}
-                isFocused={true}
-              />
-            ) : (
-              <Card className="p-8 text-center text-xs text-text-muted">
-                Select a flagged moment from the index to review observations and coaching guidance.
-              </Card>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* Delivery Curves Chart */}
       {features && (

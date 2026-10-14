@@ -108,16 +108,27 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
       }
     });
 
-    wsPart.on('timeupdate', (t) => {
+    const handleTimeCheck = (t: number) => {
       setCurrentTime(t);
       onTimeUpdate?.(t);
 
-      // Check if snippet boundary reached
-      if (snippetEndRef.current !== null && t >= snippetEndRef.current) {
+      // Check if snippet boundary reached (with 20ms tolerance for safety)
+      if (snippetEndRef.current !== null && t >= (snippetEndRef.current - 0.02)) {
+        const stopAt = snippetEndRef.current;
         snippetEndRef.current = null;
         wsPart.pause();
+        wsPart.setTime(stopAt);
+        if (refWaveSurfer.current) {
+          refWaveSurfer.current.pause();
+          refWaveSurfer.current.setTime(stopAt);
+        }
+        setIsPlaying(false);
+        onPlayStateChange?.(false);
       }
-    });
+    };
+
+    wsPart.on('timeupdate', handleTimeCheck);
+    wsPart.on('audioprocess', handleTimeCheck);
 
     wsPart.on('play', () => {
       setIsPlaying(true);
@@ -158,16 +169,24 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
       return;
     }
 
-    snippetEndRef.current = end !== undefined && end > start ? end : null;
+    const targetEnd = end !== undefined && end > start ? end : undefined;
+    snippetEndRef.current = targetEnd ?? null;
 
     try {
-      wsPart.setTime(start);
-      if (refWaveSurfer.current) {
-        refWaveSurfer.current.setTime(start);
-      }
-      wsPart.play().catch((err) => console.warn('Playback error:', err));
-      if (activeTrack === 'both' && refWaveSurfer.current) {
-        refWaveSurfer.current.play().catch(() => {});
+      if (targetEnd !== undefined) {
+        wsPart.play(start, targetEnd).catch((err) => console.warn('Playback error:', err));
+        if (activeTrack === 'both' && refWaveSurfer.current) {
+          refWaveSurfer.current.play(start, targetEnd).catch(() => {});
+        }
+      } else {
+        wsPart.setTime(start);
+        if (refWaveSurfer.current) {
+          refWaveSurfer.current.setTime(start);
+        }
+        wsPart.play().catch((err) => console.warn('Playback error:', err));
+        if (activeTrack === 'both' && refWaveSurfer.current) {
+          refWaveSurfer.current.play().catch(() => {});
+        }
       }
     } catch (e) {
       console.warn('Seek error:', e);

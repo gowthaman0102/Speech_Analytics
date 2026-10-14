@@ -90,6 +90,11 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
           const exp = item.expected_delivery;
           const act = item.actual_prosody;
 
+          const sStart = typeof item.start_time === 'number' ? item.start_time : 0;
+          const sEnd = typeof item.end_time === 'number' && item.end_time > sStart
+            ? item.end_time
+            : (sStart + (item.duration || 3.0));
+
           const handlePlayClick = (e: React.MouseEvent) => {
             e.stopPropagation();
             setSelectedIdx(idx);
@@ -100,9 +105,9 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
               }
             } else {
               if (onPlaySentence) {
-                onPlaySentence(item.start_time, item.end_time, idx);
+                onPlaySentence(sStart, sEnd, idx);
               } else if (onSeekTime) {
-                onSeekTime(item.start_time);
+                onSeekTime(sStart);
               }
             }
           };
@@ -110,9 +115,9 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
           const handleCardClick = () => {
             setSelectedIdx(idx);
             if (onPlaySentence) {
-              onPlaySentence(item.start_time, item.end_time, idx);
+              onPlaySentence(sStart, sEnd, idx);
             } else if (onSeekTime) {
-              onSeekTime(item.start_time);
+              onSeekTime(sStart);
             }
           };
 
@@ -132,7 +137,7 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                 {/* Left: Timing & Intent Badges */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-surface-2 text-text border border-border tabular-nums">
-                    #{item.sentence_index ?? idx + 1} • {(item.start_time ?? 0).toFixed(1)}s – {(item.end_time ?? 0).toFixed(1)}s
+                    #{item.sentence_index ?? idx + 1} • {sStart.toFixed(1)}s – {sEnd.toFixed(1)}s
                   </span>
                   <Badge variant={badgeVariant} size="sm">
                     {item.primary_intent.replace(/_/g, ' ')}
@@ -148,7 +153,7 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                   )}
                 </div>
 
-                {/* Right: Compatibility Score Badge & Dedicated Play/Pause Button */}
+                {/* Right: Compatibility Score Badge & Dedicated Play Sentence Button */}
                 <div className="flex items-center gap-2 self-start md:self-auto">
                   <Badge variant={scoreBadgeVariant} size="sm">
                     {score >= 70 ? (
@@ -162,26 +167,38 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                   <button
                     type="button"
                     onClick={handlePlayClick}
-                    className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                    className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer shrink-0 font-bold text-xs ${
                       isThisPlaying
-                        ? 'bg-accent text-white border-accent shadow-xs scale-105 ring-2 ring-accent/30'
+                        ? 'bg-accent text-white border-accent shadow-xs scale-102 ring-2 ring-accent/30'
                         : 'bg-surface text-text hover:text-accent hover:border-accent border-border shadow-2xs hover:bg-surface-2'
                     }`}
-                    title={isThisPlaying ? 'Pause phrase playback' : 'Play phrase snippet'}
+                    title={isThisPlaying ? 'Pause sentence playback' : 'Play this sentence alone'}
                     aria-label={isThisPlaying ? `Pause sentence ${idx + 1}` : `Play sentence ${idx + 1}`}
                   >
                     {isThisPlaying ? (
-                      <Pause className="w-4 h-4 fill-current" />
+                      <>
+                        <Pause className="w-3.5 h-3.5 fill-current" />
+                        <span>Pause</span>
+                      </>
                     ) : (
-                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                        <span>Play sentence</span>
+                      </>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* Spoken Text */}
-              <div className="mt-3">
-                <p className="text-sm font-medium text-text leading-relaxed">
+              {/* Spoken Text (Highlighted during playback for easy reading) */}
+              <div className={`mt-3 p-3.5 rounded-xl border transition-all ${
+                isThisPlaying
+                  ? 'bg-accent-soft border-accent/30 text-text shadow-2xs'
+                  : 'bg-surface-2/60 border-border'
+              }`}>
+                <p className={`leading-relaxed ${
+                  isThisPlaying ? 'font-bold text-accent-text text-base' : 'font-medium text-text text-sm'
+                }`}>
                   "{item.text}"
                 </p>
               </div>

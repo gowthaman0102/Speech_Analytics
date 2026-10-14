@@ -25,7 +25,7 @@ export const Tabs: React.FC<TabsProps> = ({
 }) => {
   if (variant === 'segmented') {
     return (
-      <div className={twMerge(clsx('inline-flex p-1 bg-[--surface-2] rounded-[6px] border border-[--border]', className))}>
+      <div className={twMerge(clsx('inline-flex p-1 bg-surface-2 rounded-xl border border-border', className))}>
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
           return (
@@ -33,15 +33,15 @@ export const Tabs: React.FC<TabsProps> = ({
               key={tab.id}
               onClick={() => onChange(tab.id)}
               className={clsx(
-                'px-3 py-1 text-xs font-medium rounded-[4px] transition-all select-none',
+                'px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all select-none cursor-pointer',
                 isActive
-                  ? 'bg-[--surface] text-[--text] shadow-xs'
-                  : 'text-[--text-muted] hover:text-[--text]'
+                  ? 'bg-surface text-accent shadow-xs'
+                  : 'text-text-muted hover:text-text'
               )}
             >
               {tab.label}
               {tab.count !== undefined && (
-                <span className="ml-1.5 opacity-70 tabular-nums">({tab.count})</span>
+                <span className="ml-1.5 opacity-80 tabular-nums">({tab.count})</span>
               )}
             </button>
           );
@@ -51,7 +51,7 @@ export const Tabs: React.FC<TabsProps> = ({
   }
 
   return (
-    <div className={twMerge(clsx('flex items-center gap-6 border-b border-[--border]', className))}>
+    <div className={twMerge(clsx('flex items-center gap-6 border-b border-border', className))}>
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
         return (
@@ -59,15 +59,15 @@ export const Tabs: React.FC<TabsProps> = ({
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={clsx(
-              'pb-2.5 text-sm font-medium border-b-2 -mb-px transition-colors select-none flex items-center gap-1.5',
+              'pb-3 text-sm font-semibold border-b-2 -mb-px transition-colors select-none flex items-center gap-2 cursor-pointer',
               isActive
-                ? 'border-[--accent] text-[--accent]'
-                : 'border-transparent text-[--text-muted] hover:text-[--text] hover:border-[--border-strong]'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-text-muted hover:text-text hover:border-border-strong'
             )}
           >
             <span>{tab.label}</span>
             {tab.count !== undefined && (
-              <span className="text-xs px-1.5 py-0.2 bg-[--surface-2] rounded-full tabular-nums">
+              <span className="text-xs px-2 py-0.5 bg-surface-2 rounded-full tabular-nums text-text-muted">
                 {tab.count}
               </span>
             )}

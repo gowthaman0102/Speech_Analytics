@@ -17,7 +17,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full space-y-1.5 text-left">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-[--text]">
+          <label htmlFor={inputId} className="block text-sm font-semibold text-text">
             {label}
           </label>
         )}
@@ -27,8 +27,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             className={twMerge(
               clsx(
-                'w-full h-10 px-3 bg-[--surface] text-[--text] placeholder:text-[--text-subtle] text-sm rounded-[6px] border border-[--border] focus:outline-none focus:border-[--accent] focus:ring-1 focus:ring-[--accent] transition-colors disabled:bg-[--surface-2] disabled:cursor-not-allowed',
-                error && 'border-[--danger] focus:border-[--danger] focus:ring-[--danger]',
+                'w-full h-10 px-3.5 bg-surface text-text placeholder:text-text-subtle text-sm rounded-xl border border-border focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all disabled:bg-surface-2 disabled:cursor-not-allowed',
+                error && 'border-danger focus:border-danger focus:ring-danger/20',
                 className
               )
             )}
@@ -36,12 +36,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error ? (
-          <p className="flex items-center gap-1.5 text-xs text-[--danger]">
+          <p className="flex items-center gap-1.5 text-xs text-danger font-medium">
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
             <span>{error}</span>
           </p>
         ) : helperText ? (
-          <p className="text-xs text-[--text-muted]">{helperText}</p>
+          <p className="text-xs text-text-muted">{helperText}</p>
         ) : null}
       </div>
     );

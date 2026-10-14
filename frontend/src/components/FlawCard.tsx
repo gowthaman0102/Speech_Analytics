@@ -4,7 +4,7 @@ import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from './ui/Table';
-import type { FlawSegment, FlawMetricDetail } from '../types';
+import type { FlawSegment } from '../types';
 
 interface FlawCardProps {
   flaw: FlawSegment;
@@ -26,11 +26,11 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case 'HIGH':
-        return <Badge variant="danger">High Severity</Badge>;
+        return <Badge variant="danger">High</Badge>;
       case 'MEDIUM':
-        return <Badge variant="warning">Medium Severity</Badge>;
+        return <Badge variant="warning">Medium</Badge>;
       default:
-        return <Badge variant="default">Low Severity</Badge>;
+        return <Badge variant="neutral">Low</Badge>;
     }
   };
 
@@ -43,21 +43,21 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
   const cause = explanation?.cause || flaw.cause;
   const effect = explanation?.effect || flaw.effect;
   const recommendation = explanation?.recommendation || flaw.recommendation;
-  const summary = explanation?.summary || 'The delivery exhibited measurable divergence from the baseline standard.';
+  const summary = explanation?.summary || 'The delivery exhibited measurable difference from the reference standard.';
   const flawDuration = flaw.duration ?? (flaw.end !== undefined && flaw.start !== undefined ? flaw.end - flaw.start : 0);
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 text-left">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--border)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
         <div>
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)]">
+          <div className="flex items-center gap-2.5 flex-wrap mb-1.5">
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-surface-2 text-text border border-border">
               {formatTime(flaw.start)} – {formatTime(flaw.end)} ({(flawDuration ?? 0).toFixed(1)}s)
             </span>
             {getSeverityBadge(flaw.severity)}
           </div>
-          <h4 className="text-lg font-semibold text-[var(--foreground)] tracking-tight">
+          <h4 className="text-lg font-bold text-text tracking-tight">
             {formattedTitle}
           </h4>
         </div>
@@ -69,17 +69,17 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
               onClick={() => onPlayTimestamp(flaw.start)}
               className="flex items-center gap-1.5 text-xs"
             >
-              <Volume2 className="w-3.5 h-3.5 text-[var(--accent)]" />
-              <span>Play Snippet</span>
+              <Volume2 className="w-3.5 h-3.5 text-accent" />
+              <span>Play snippet</span>
             </Button>
           )}
 
           <Button
             variant="ghost"
             onClick={() => setShowMeasurements(!showMeasurements)}
-            className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            className="flex items-center gap-1 text-xs text-text-muted hover:text-text"
           >
-            <span>{showMeasurements ? 'Hide data' : 'Show data'}</span>
+            <span>{showMeasurements ? 'Hide measurements' : 'Show measurements'}</span>
             {showMeasurements ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </Button>
         </div>
@@ -87,9 +87,9 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
 
       {/* Spoken phrase quote */}
       {flaw.transcript && (
-        <div className="my-4 p-3 rounded bg-[var(--surface-2)] border-l-2 border-[var(--accent)]">
-          <p className="text-xs text-[var(--muted-foreground)] font-mono mb-0.5">Spoken Delivery Excerpt:</p>
-          <p className="font-serif italic text-sm text-[var(--foreground)] leading-relaxed">
+        <div className="my-4 p-4 rounded-xl bg-surface-2 border-l-4 border-l-accent">
+          <p className="text-xs text-text-muted font-bold mb-1">Spoken phrase:</p>
+          <p className="text-sm text-text font-medium leading-relaxed">
             "{flaw.transcript}"
           </p>
         </div>
@@ -97,22 +97,22 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
 
       {/* Plain language summary */}
       <div className="my-4">
-        <h5 className="text-xs font-mono uppercase tracking-wider text-[var(--muted-foreground)] mb-1">
-          Delivery Diagnosis
+        <h5 className="text-xs font-bold text-text-muted mb-1">
+          Delivery observation
         </h5>
-        <p className="text-sm text-[var(--foreground)] leading-relaxed">
+        <p className="text-sm text-text leading-relaxed">
           {summary}
         </p>
       </div>
 
       {/* Actionable Coaching Recommendation */}
       {recommendation && (
-        <div className="p-4 rounded-md border border-[var(--accent-subtle)] bg-[var(--accent-subtle)]/40 my-4">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--accent)] mb-1">
+        <div className="p-4 rounded-xl border border-accent/20 bg-accent-soft my-4">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-accent-text mb-1">
             <Lightbulb className="w-4 h-4 shrink-0" />
-            <span>Coaching Recommendation</span>
+            <span>Coaching recommendation</span>
           </div>
-          <p className="text-xs text-[var(--foreground)] leading-relaxed">
+          <p className="text-xs text-text leading-relaxed font-medium">
             {recommendation}
           </p>
         </div>
@@ -120,44 +120,44 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
 
       {/* Cause & Effect breakdown */}
       {(cause || effect) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4 pt-3 border-t border-[var(--border)] text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4 pt-3 border-t border-border text-xs">
           {cause && (
             <div>
-              <span className="font-semibold text-[var(--foreground)] block mb-0.5">Acoustic Cause:</span>
-              <p className="text-[var(--muted-foreground)] leading-relaxed">{cause}</p>
+              <span className="font-bold text-text block mb-1">What happened:</span>
+              <p className="text-text-muted leading-relaxed">{cause}</p>
             </div>
           )}
           {effect && (
             <div>
-              <span className="font-semibold text-[var(--foreground)] block mb-0.5">Audience Effect:</span>
-              <p className="text-[var(--muted-foreground)] leading-relaxed">{effect}</p>
+              <span className="font-bold text-text block mb-1">Effect on listener:</span>
+              <p className="text-text-muted leading-relaxed">{effect}</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Expandable Technical Measurements Table */}
+      {/* Optional Acoustic Measurements Disclosure */}
       {showMeasurements && (
-        <div className="mt-4 pt-4 border-t border-[var(--border)]">
-          <h5 className="text-xs font-semibold text-[var(--foreground)] mb-2 flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 text-[var(--accent)]" />
-            <span>Acoustic Measurements & Diagnostic Comparison</span>
+        <div className="mt-4 pt-4 border-t border-border">
+          <h5 className="text-xs font-bold text-text mb-2.5 flex items-center gap-1.5">
+            <Compass className="w-4 h-4 text-accent" />
+            <span>Acoustic measurements & reference comparison</span>
           </h5>
 
           {metrics.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Acoustic Metric</TableHead>
+                  <TableHead>Metric</TableHead>
                   <TableHead>Reference</TableHead>
                   <TableHead>Participant</TableHead>
-                  <TableHead>Deviation</TableHead>
+                  <TableHead>Difference</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {metrics.map((m: any, idx: number) => {
-                  const metricName = m.name ?? m.featureName ?? 'Acoustic Metric';
+                  const metricName = m.name ?? m.featureName ?? 'Acoustic metric';
                   const refVal = m.reference_val ?? m.referenceValue;
                   const partVal = m.participant_val ?? m.participantValue;
                   const deltaPct = m.delta_pct ?? m.differencePercent ?? 0;
@@ -167,26 +167,20 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
 
                   return (
                     <TableRow key={idx}>
-                      <TableCell className="font-medium text-[var(--foreground)]">{metricName}</TableCell>
-                      <TableCell className="font-mono text-xs text-[var(--muted-foreground)]">
+                      <TableCell className="font-bold text-text">{metricName}</TableCell>
+                      <TableCell className="tabular-nums text-xs text-text-muted">
                         {typeof refVal === 'number' ? `${refVal.toFixed(1)} ${unit}` : refVal !== undefined ? `${refVal} ${unit}` : '—'}
                       </TableCell>
-                      <TableCell className="font-mono text-xs font-semibold text-[var(--foreground)]">
+                      <TableCell className="tabular-nums text-xs font-bold text-text">
                         {typeof partVal === 'number' ? `${partVal.toFixed(1)} ${unit}` : partVal !== undefined ? `${partVal} ${unit}` : '—'}
                       </TableCell>
-                      <TableCell className="font-mono text-xs font-semibold text-[var(--series-participant)]">
+                      <TableCell className="tabular-nums text-xs font-bold text-accent">
                         {typeof deltaPct === 'number' ? `${sign}${deltaPct.toFixed(1)}%` : deltaPct}
                       </TableCell>
                       <TableCell>
-                        <span
-                          className={`inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                            isFlagged
-                              ? 'bg-rose-50 text-rose-800 border-rose-200'
-                              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          }`}
-                        >
-                          {isFlagged ? 'Flagged Deviation' : 'In Tolerance'}
-                        </span>
+                        <Badge variant={isFlagged ? 'danger' : 'success'} size="sm">
+                          {isFlagged ? 'Flagged' : 'Within range'}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   );
@@ -194,14 +188,14 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
               </TableBody>
             </Table>
           ) : (
-            <div className="p-3 bg-[var(--surface-2)] rounded text-xs text-[var(--muted-foreground)]">
-              Detailed scalar feature deltas were compiled into composite score.
+            <div className="p-3 bg-surface-2 rounded-xl text-xs text-text-muted">
+              Individual measurements were combined into the composite score.
             </div>
           )}
 
           {explanation?.why_flagged && (
-            <div className="mt-3 p-3 rounded bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--muted-foreground)]">
-              <span className="font-semibold text-[var(--foreground)] mr-1">Threshold Rule:</span>
+            <div className="mt-3 p-3 rounded-xl bg-surface-2 border border-border text-xs text-text-muted">
+              <span className="font-bold text-text mr-1">Guideline rule:</span>
               {explanation.why_flagged}
             </div>
           )}

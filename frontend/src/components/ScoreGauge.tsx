@@ -1,4 +1,5 @@
 import React from 'react';
+import { Badge } from './ui/Badge';
 
 interface ScoreGaugeProps {
   score: number;
@@ -18,27 +19,27 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
   const clampedScore = Math.max(0, Math.min(100, Math.round(score)));
 
   let statusText = 'Needs Practice';
-  let badgeClasses = 'bg-rose-50 text-rose-800 border-rose-200';
-  let strokeColor = '#C2571A';
+  let badgeVariant: 'success' | 'teal' | 'warning' | 'danger' = 'danger';
+  let strokeColor = '#A23A26'; // --danger
 
   if (clampedScore >= 85) {
     statusText = 'Excellent';
-    badgeClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-    strokeColor = '#1F4E79';
+    badgeVariant = 'success';
+    strokeColor = '#2F6B4F'; // --success
   } else if (clampedScore >= 70) {
     statusText = 'Competent';
-    badgeClasses = 'bg-sky-50 text-sky-800 border-sky-200';
-    strokeColor = '#1F4E79';
+    badgeVariant = 'teal';
+    strokeColor = '#2F6F73'; // --teal
   } else if (clampedScore >= 55) {
     statusText = 'Developing';
-    badgeClasses = 'bg-amber-50 text-amber-800 border-amber-200';
-    strokeColor = '#B45309';
+    badgeVariant = 'warning';
+    strokeColor = '#8A6410'; // --warning
   }
 
   const dimensions = {
     sm: { radius: 28, stroke: 4, box: 72, fontSize: 'text-xl', labelSize: 'text-xs' },
     md: { radius: 44, stroke: 6, box: 110, fontSize: 'text-3xl', labelSize: 'text-sm' },
-    lg: { radius: 64, stroke: 8, box: 156, fontSize: 'text-5xl', labelSize: 'text-base' },
+    lg: { radius: 64, stroke: 8, box: 156, fontSize: 'text-4xl', labelSize: 'text-base' },
   }[size];
 
   const circumference = 2 * Math.PI * dimensions.radius;
@@ -61,7 +62,7 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
             cx={dimensions.box / 2}
             cy={dimensions.box / 2}
             r={dimensions.radius}
-            stroke="var(--surface-2)"
+            stroke="#F5E8DA"
             strokeWidth={dimensions.stroke}
             fill="transparent"
           />
@@ -81,11 +82,11 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
         </svg>
 
         <div className="absolute flex flex-col items-center justify-center">
-          <span className={`font-serif font-bold text-[var(--foreground)] tracking-tight ${dimensions.fontSize}`}>
+          <span className={`font-extrabold text-text tracking-tight ${dimensions.fontSize}`}>
             {clampedScore}
           </span>
           {size === 'lg' && (
-            <span className="text-[10px] text-[var(--muted-foreground)] font-mono uppercase tracking-wider">
+            <span className="text-xs text-text-muted font-bold">
               / 100
             </span>
           )}
@@ -93,17 +94,17 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
       </div>
 
       <div className="mt-2.5">
-        <h4 className={`font-medium text-[var(--foreground)] ${dimensions.labelSize}`}>{label}</h4>
+        <h4 className={`font-bold text-text ${dimensions.labelSize}`}>{label}</h4>
         {weight !== undefined && (
-          <span className="text-xs text-[var(--muted-foreground)] block">
+          <span className="text-xs text-text-muted block">
             Weight: {Math.round(weight * 100)}%
           </span>
         )}
         {showCategoryBadge && (
-          <div className="mt-1.5">
-            <span className={`inline-block text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${badgeClasses}`}>
+          <div className="mt-2">
+            <Badge variant={badgeVariant} size="sm">
               {statusText}
-            </span>
+            </Badge>
           </div>
         )}
       </div>

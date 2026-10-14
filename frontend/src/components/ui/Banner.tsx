@@ -25,10 +25,10 @@ export const Banner: React.FC<BannerProps> = ({
   };
 
   const variants = {
-    info: 'bg-[--info-soft] text-[--info] border-[--border]',
-    warning: 'bg-[--warning-soft] text-[#7A5200] border-[--warning-soft]',
-    danger: 'bg-[--danger-soft] text-[--danger] border-[--danger-soft]',
-    success: 'bg-[--success-soft] text-[--success] border-[--success-soft]',
+    info: 'bg-teal-soft text-teal-text border-teal-soft',
+    warning: 'bg-warning-soft text-warning border-warning-soft',
+    danger: 'bg-danger-soft text-danger border-danger-soft',
+    success: 'bg-success-soft text-success border-success-soft',
   };
 
   const Icon = icons[variant];
@@ -38,17 +38,17 @@ export const Banner: React.FC<BannerProps> = ({
       role="alert"
       className={twMerge(
         clsx(
-          'p-3.5 rounded-[6px] border flex items-start gap-3 text-xs leading-relaxed',
+          'p-4 rounded-xl border flex items-start gap-3 text-sm leading-relaxed',
           variants[variant],
           className
         )
       )}
       {...props}
     >
-      <Icon className="h-4 w-4 shrink-0 mt-0.5" />
+      <Icon className="h-5 w-5 shrink-0 mt-0.5" />
       <div className="flex-1">
-        {title && <h5 className="font-semibold mb-0.5">{title}</h5>}
-        <div>{children}</div>
+        {title && <h5 className="font-bold text-sm mb-0.5">{title}</h5>}
+        <div className="text-xs leading-relaxed">{children}</div>
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>

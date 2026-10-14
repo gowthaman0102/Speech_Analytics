@@ -1,83 +1,109 @@
 @import "tailwindcss";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/source-serif-4";
+@import "@fontsource-variable/nunito";
 
 :root {
   /* Surfaces */
-  --bg: #F7F6F3;
-  --surface: #FFFFFF;
-  --surface-2: #F1EFEA;
-  --border: #E3E0D8;
-  --border-strong: #CFCBC0;
+  --bg:            #FBF4EC;   /* page */
+  --surface:       #FFFFFF;   /* cards, inputs */
+  --surface-2:     #F5E8DA;   /* soft panels, table headers, wells */
+  --surface-3:     #F0D9C4;   /* hero side panel, strong wells */
+  --border:        #EBD8C4;
+  --border-strong: #DDC3A6;
 
   /* Text */
-  --text: #1C1B19;
-  --text-muted: #5E5B54;
-  --text-subtle: #8A867C;
-  --foreground: #1C1B19;
-  --muted-foreground: #5E5B54;
+  --text:          #2B2118;
+  --text-muted:    #7A6552;   /* (use for secondary text; keep at 13px or larger) */
+  --text-subtle:   #8F7A66;   /* (placeholders only) */
+  --on-accent:     #FFFFFF;
 
-  /* Accent (single brand color: deep teal-blue) */
-  --accent: #1F4E79;
-  --accent-hover: #183E60;
-  --accent-soft: #E6EEF5;
-  --accent-subtle: #E6EEF5;
+  /* Terracotta Brand Accent */
+  --accent:        #C2562D;   /* buttons, focus rings, primary highlights */
+  --accent-hover:  #A84622;
+  --accent-soft:   #F8E3D8;   /* badges, active tabs, subtle highlights */
+  --accent-text:   #A84622;   /* text on accent-soft */
+
+  /* Deep Teal Counterpoint */
+  --teal:          #2F6F73;   /* reference series, coach tips, secondary badges */
+  --teal-soft:     #E3F1F0;
+  --teal-text:     #1F5F63;
 
   /* Semantic */
-  --success: #2F6B4F;
-  --success-soft: #E5F0EA;
-  --warning: #9A6700;
-  --warning-soft: #FBF1DC;
-  --danger: #A4362B;
-  --danger-soft: #F8E7E4;
-  --info: #1F4E79;
-  --info-soft: #E6EEF5;
+  --success:       #2F6B4F;
+  --success-soft:  #E4F1EA;
+  --warning:       #8A6410;
+  --warning-soft:  #F6E9BE;
+  --danger:        #A23A26;
+  --danger-soft:   #F8D9CC;
 
-  /* Chart series (colour-blind safe, muted) */
-  --series-ref: #1F4E79;
-  --series-participant: #C2571A;
-  --series-deviation: #6B6B6B;
-  --flaw-low: #D9B44A;
-  --flaw-med: #D9822B;
-  --flaw-high: #B5372B;
+  /* Chart / Series */
+  --series-reference:   #2F6F73;
+  --series-participant: #C2562D;
+  --series-deviation:   #7A6552;
+  --flaw-low:           #C9A227;
+  --flaw-medium:        #D9822B;
+  --flaw-high:          #A23A26;
+  --grid:               #EBD8C4;
+
+  /* Aliases for compatibility */
+  --foreground:        #2B2118;
+  --muted-foreground:  #7A6552;
+  --series-ref:        #2F6F73;
+  --flaw-med:          #D9822B;
+  --error:             #A23A26;
+  --info:              #2F6F73;
+  --info-soft:         #E3F1F0;
+  --accent-subtle:     #F8E3D8;
 
   color-scheme: light;
 }
 
 @theme {
-  --color-bg: #F7F6F3;
+  --color-bg: #FBF4EC;
   --color-surface: #FFFFFF;
-  --color-surface-2: #F1EFEA;
-  --color-border: #E3E0D8;
-  --color-border-strong: #CFCBC0;
+  --color-surface-2: #F5E8DA;
+  --color-surface-3: #F0D9C4;
+  --color-border: #EBD8C4;
+  --color-border-strong: #DDC3A6;
 
-  --color-text: #1C1B19;
-  --color-text-muted: #5E5B54;
-  --color-text-subtle: #8A867C;
+  --color-text: #2B2118;
+  --color-text-muted: #7A6552;
+  --color-text-subtle: #8F7A66;
+  --color-on-accent: #FFFFFF;
 
-  --color-accent: #1F4E79;
-  --color-accent-hover: #183E60;
-  --color-accent-soft: #E6EEF5;
+  --color-accent: #C2562D;
+  --color-accent-hover: #A84622;
+  --color-accent-soft: #F8E3D8;
+  --color-accent-text: #A84622;
+
+  --color-teal: #2F6F73;
+  --color-teal-soft: #E3F1F0;
+  --color-teal-text: #1F5F63;
 
   --color-success: #2F6B4F;
-  --color-success-soft: #E5F0EA;
-  --color-warning: #9A6700;
-  --color-warning-soft: #FBF1DC;
-  --color-danger: #A4362B;
-  --color-danger-soft: #F8E7E4;
-  --color-info: #1F4E79;
-  --color-info-soft: #E6EEF5;
+  --color-success-soft: #E4F1EA;
+  --color-warning: #8A6410;
+  --color-warning-soft: #F6E9BE;
+  --color-danger: #A23A26;
+  --color-danger-soft: #F8D9CC;
 
-  --color-series-ref: #1F4E79;
-  --color-series-participant: #C2571A;
-  --color-series-deviation: #6B6B6B;
-  --color-flaw-low: #D9B44A;
+  --color-series-reference: #2F6F73;
+  --color-series-participant: #C2562D;
+  --color-series-deviation: #7A6552;
+  --color-flaw-low: #C9A227;
+  --color-flaw-medium: #D9822B;
+  --color-flaw-high: #A23A26;
+  --color-grid: #EBD8C4;
+
+  --color-foreground: #2B2118;
+  --color-muted-foreground: #7A6552;
+  --color-series-ref: #2F6F73;
   --color-flaw-med: #D9822B;
-  --color-flaw-high: #B5372B;
+  --color-error: #A23A26;
+  --color-info: #2F6F73;
+  --color-info-soft: #E3F1F0;
+  --color-accent-subtle: #F8E3D8;
 
-  --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, sans-serif;
-  --font-serif: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif;
-  --font-mono: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: 'Nunito Variable', Nunito, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
@@ -131,7 +157,7 @@ a, button, input, select, textarea {
 @media print {
   body {
     background-color: #FFFFFF !important;
-    color: #1C1B19 !important;
+    color: #2B2118 !important;
   }
   .no-print {
     display: none !important;

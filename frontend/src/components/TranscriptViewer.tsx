@@ -35,35 +35,35 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
   };
 
   return (
-    <Card className="p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[var(--border)]">
+    <Card className="p-6 text-left">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
-            <h3 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
-              Grounded Delivery Transcript
+            <FileText className="w-4 h-4 text-accent" aria-hidden="true" />
+            <h3 className="text-base font-bold text-text tracking-tight">
+              Interactive transcript
             </h3>
           </div>
-          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-            Click any phrase to jump to its corresponding timestamp in the audio player.
+          <p className="text-xs text-text-muted mt-1">
+            Click any word or sentence to jump to that moment in the recording.
           </p>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 text-xs text-[var(--muted-foreground)]">
+        <div className="flex items-center gap-4 text-xs text-text-muted">
           <div className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 bg-rose-600 inline-block" />
-            <span>Severe flaw</span>
+            <span className="w-4 h-0.5 bg-danger inline-block rounded-full" />
+            <span>High flag</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 bg-amber-600 inline-block" />
-            <span>Moderate flaw</span>
+            <span className="w-4 h-0.5 bg-flaw-medium inline-block rounded-full" />
+            <span>Medium flag</span>
           </div>
         </div>
       </div>
 
       {alignmentWords && alignmentWords.length > 0 ? (
-        <div className="p-6 bg-[var(--surface-2)] rounded-md border border-[var(--border)] flex flex-wrap gap-x-1.5 gap-y-2 text-[17px] font-serif text-[var(--foreground)] leading-loose">
+        <div className="p-6 bg-surface-2 rounded-xl border border-border flex flex-wrap gap-x-1.5 gap-y-2 text-[17px] text-text leading-[1.8]">
           {alignmentWords.map((w: any, idx: number) => {
             const wordText = w.word ?? w.text ?? '';
             const start = w.part_start ?? w.start ?? 0;
@@ -73,15 +73,15 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
             );
             const isSelected = overlappingFlaw && selectedFlawId === overlappingFlaw.id;
 
-            let underlineClass = 'hover:text-[var(--accent)]';
+            let underlineClass = 'hover:text-accent';
             if (isSelected) {
-              underlineClass = 'border-b-2 border-[var(--foreground)] bg-[var(--accent-subtle)] font-medium';
+              underlineClass = 'border-b-2 border-accent bg-accent-soft text-accent-text font-bold rounded-xs';
             } else if (overlappingFlaw?.severity === 'HIGH') {
-              underlineClass = 'border-b-2 border-rose-600 hover:bg-rose-50';
+              underlineClass = 'border-b-2 border-danger hover:bg-danger-soft';
             } else if (overlappingFlaw?.severity === 'MEDIUM') {
-              underlineClass = 'border-b-2 border-amber-600 hover:bg-amber-50';
+              underlineClass = 'border-b-2 border-flaw-medium hover:bg-warning-soft';
             } else if (overlappingFlaw) {
-              underlineClass = 'border-b-2 border-amber-400 hover:bg-amber-50';
+              underlineClass = 'border-b-2 border-flaw-low hover:bg-warning-soft';
             }
 
             return (
@@ -104,7 +104,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
           })}
         </div>
       ) : (
-        <div className="p-6 bg-[var(--surface-2)] rounded-md border border-[var(--border)] space-y-4 font-serif text-[17px] text-[var(--foreground)] leading-relaxed">
+        <div className="p-6 bg-surface-2 rounded-xl border border-border space-y-4 text-[17px] text-text leading-[1.8]">
           {sentences.map((sentence, sIdx) => {
             const matchingFlaws = flaws.filter(
               (f) =>
@@ -124,12 +124,12 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
                     onSelectFlaw?.(flaw);
                     onSeekTime?.(flaw.start);
                   }}
-                  className={`p-2.5 rounded cursor-pointer transition-colors ${
+                  className={`p-3 rounded-xl cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-[var(--accent-subtle)] border-l-2 border-[var(--accent)] font-medium'
+                      ? 'bg-accent-soft border-l-4 border-l-accent font-bold text-accent-text'
                       : flaw.severity === 'HIGH'
-                      ? 'border-l-2 border-rose-600 hover:bg-rose-50'
-                      : 'border-l-2 border-amber-600 hover:bg-amber-50'
+                      ? 'border-l-4 border-l-danger bg-surface hover:bg-danger-soft'
+                      : 'border-l-4 border-l-flaw-medium bg-surface hover:bg-warning-soft'
                   }`}
                   role="button"
                   tabIndex={0}
@@ -146,7 +146,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
             }
 
             return (
-              <p key={sIdx} className="text-[var(--foreground)] opacity-90">
+              <p key={sIdx} className="text-text opacity-95">
                 {sentence}
               </p>
             );

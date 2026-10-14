@@ -3,20 +3,17 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Printer,
   RotateCcw,
-  Sliders,
   AlertTriangle,
-  ArrowLeft,
-  Percent,
-  ShieldCheck,
-  Activity,
   Layers,
   ChevronRight,
   MessageSquareQuote,
   Sparkles,
+  Percent,
+  ShieldCheck,
+  Activity,
 } from 'lucide-react';
 import { evaluationApi } from '../api/evaluationApi';
 import type { EvaluationDetail, FeatureTimeSeries, FlawSegment } from '../types';
-import { ScoreGauge } from '../components/ScoreGauge';
 import { WaveformComparison } from '../components/WaveformComparison';
 import { FeatureChart } from '../components/FeatureChart';
 import { FlawTimeline } from '../components/FlawTimeline';
@@ -26,6 +23,7 @@ import { TranscriptViewer } from '../components/TranscriptViewer';
 import { SentenceAnalysisView } from '../components/SentenceAnalysisView';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 import { Skeleton } from '../components/ui/Skeleton';
 
 export const ResultsPage: React.FC = () => {
@@ -39,7 +37,6 @@ export const ResultsPage: React.FC = () => {
 
   const [selectedFlaw, setSelectedFlaw] = useState<FlawSegment | null>(null);
   const [seekTimestamp, setSeekTimestamp] = useState<number | null>(null);
-  const [showAuditConfig, setShowAuditConfig] = useState<boolean>(false);
 
   useEffect(() => {
     if (!id) return;
@@ -80,7 +77,7 @@ export const ResultsPage: React.FC = () => {
     }
   }, [evaluation, handleSelectFlaw]);
 
-  // Keyboard navigation: [ for prev flaw, ] for next flaw, Esc to clear
+  // Keyboard navigation: [ for prev flaw, ] for next flaw
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!evaluation || evaluation.flaws.length === 0) return;
@@ -109,14 +106,14 @@ export const ResultsPage: React.FC = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-6">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-9 w-32" />
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-10 w-32" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Skeleton className="h-44" />
-          <Skeleton className="h-44" />
-          <Skeleton className="h-44" />
-          <Skeleton className="h-44" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
         </div>
         <Skeleton className="h-80" />
       </div>
@@ -127,15 +124,15 @@ export const ResultsPage: React.FC = () => {
     return (
       <div className="max-w-md mx-auto my-20 p-8 text-center">
         <Card className="p-8">
-          <AlertTriangle className="w-10 h-10 text-rose-600 mx-auto mb-3" />
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">Evaluation Unavailable</h2>
-          <p className="text-xs text-[var(--muted-foreground)] mt-2 leading-relaxed">{error}</p>
+          <AlertTriangle className="w-10 h-10 text-danger mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-text">Evaluation unavailable</h2>
+          <p className="text-xs text-text-muted mt-2 leading-relaxed">{error}</p>
           <div className="mt-6 flex items-center justify-center gap-3">
             <Button variant="primary" onClick={() => navigate('/evaluate')}>
-              Start New Evaluation
+              New evaluation
             </Button>
             <Button variant="secondary" onClick={() => navigate('/evaluations')}>
-              View History
+              View history
             </Button>
           </div>
         </Card>
@@ -143,54 +140,45 @@ export const ResultsPage: React.FC = () => {
     );
   }
 
-  const { summary, configAudit } = evaluation;
+  const { summary } = evaluation;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 text-left">
       {/* Breadcrumb & Action Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <nav className="flex items-center gap-2 text-xs text-[var(--muted-foreground)] mb-1" aria-label="Breadcrumb">
-            <Link to="/evaluations" className="hover:text-[var(--foreground)] flex items-center gap-1">
-              <Layers className="w-3 h-3" />
+          <nav className="flex items-center gap-2 text-xs text-text-muted mb-1.5" aria-label="Breadcrumb">
+            <Link to="/evaluations" className="hover:text-text flex items-center gap-1 font-semibold">
+              <Layers className="w-3.5 h-3.5" />
               <span>Evaluations</span>
             </Link>
             <ChevronRight className="w-3 h-3" />
-            <span className="font-mono text-[var(--foreground)]">#{evaluation.evaluationId.slice(0, 8)}</span>
+            <span className="text-text font-bold">Report details</span>
           </nav>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-serif font-bold text-[var(--foreground)] tracking-tight">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text tracking-tight">
               {evaluation.title}
             </h1>
             {evaluation.detectedSpeakingStyle && (
-              <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[var(--accent)] text-white flex items-center gap-1 shadow-xs">
-                <Sparkles className="w-3 h-3" />
+              <Badge variant="accent" size="sm">
+                <Sparkles className="w-3 h-3 mr-1" />
                 <span>{evaluation.detectedSpeakingStyle}</span>
-              </span>
+              </Badge>
             )}
           </div>
-          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-            Automated semantic intent & temporal speech delivery analysis.
+          <p className="text-xs text-text-muted mt-1">
+            Speech delivery assessment across vocal melody, rhythm cadence, and energy projection.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap print:hidden">
-          <Button
-            variant="ghost"
-            onClick={() => setShowAuditConfig(!showAuditConfig)}
-            className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>{showAuditConfig ? 'Hide Audit Config' : 'Audit Config'}</span>
-          </Button>
-
           <Button
             variant="secondary"
             onClick={() => navigate('/evaluate')}
             className="flex items-center gap-1.5 text-xs"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>New Evaluation</span>
+            <span>New evaluation</span>
           </Button>
 
           <Button
@@ -199,157 +187,132 @@ export const ResultsPage: React.FC = () => {
             className="flex items-center gap-1.5 text-xs"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Print Report</span>
+            <span>Print report</span>
           </Button>
         </div>
       </div>
 
-      {/* Audit Configuration Drawer */}
-      {showAuditConfig && configAudit && (
-        <Card className="p-5 bg-[var(--surface-2)]">
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--border)]">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">
-              Active Detection Thresholds & Rubric Configuration
-            </h4>
-            <span className="text-[11px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              Deterministic Rules Active
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs font-mono">
-            <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
-              <span className="text-[10px] text-[var(--muted-foreground)] block">Pacing Tolerance</span>
-              <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                ±{((configAudit.paceThreshold ?? 0.25) * 100).toFixed(0)}% WPM
-              </span>
-            </div>
-            <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
-              <span className="text-[10px] text-[var(--muted-foreground)] block">Pitch Modulation</span>
-              <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                -{((configAudit.pitchVarianceThreshold ?? 0.35) * 100).toFixed(0)}% Spread
-              </span>
-            </div>
-            <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
-              <span className="text-[10px] text-[var(--muted-foreground)] block">Pause Anomaly</span>
-              <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                &gt;{(configAudit.pauseThreshold ?? 0.4).toFixed(2)}s
-              </span>
-            </div>
-            <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
-              <span className="text-[10px] text-[var(--muted-foreground)] block">Energy Delta</span>
-              <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                &gt;{((configAudit.energyThreshold ?? 0.3) * 100).toFixed(0)}% RMS
-              </span>
-            </div>
-            <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
-              <span className="text-[10px] text-[var(--muted-foreground)] block">Min Duration</span>
-              <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                {(configAudit.minFlawDurationSec ?? 0.4).toFixed(2)}s
-              </span>
-            </div>
-            <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
-              <span className="text-[10px] text-[var(--muted-foreground)] block">Merge Gap</span>
-              <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                {(configAudit.flawMergeGapSec ?? 0.5).toFixed(2)}s
-              </span>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Top Metrics Row */}
+      {/* Top Stat Row: Solid Terracotta Overall Score Tile + 3 White Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Overall Score Card */}
-        <Card className="p-5 flex flex-col items-center justify-center">
-          <ScoreGauge score={summary.overallScore} label="Overall Delivery Score" size="lg" />
-        </Card>
-
-        {/* 3 Key Analytical Pillars */}
-        <Card className="p-5 flex flex-col justify-between">
+        {/* Overall Score Tile: Solid Terracotta Background */}
+        <div className="p-6 rounded-2xl bg-accent text-white flex flex-col justify-between shadow-[0_1px_0_rgba(120,80,40,0.08)]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              Baseline Similarity
+            <span className="text-xs font-bold text-white/90">
+              Overall delivery score
             </span>
-            <Percent className="w-4 h-4 text-[var(--accent)]" />
+            <Sparkles className="w-4 h-4 text-white/80" />
           </div>
-          <div className="my-3">
-            <span className="text-3xl font-serif font-bold text-[var(--foreground)]">
-              {summary.similarity}%
-            </span>
-            <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Cross-correlation across DTW-aligned acoustic trajectories.
+          <div className="my-4">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight tabular-nums">
+                {Math.round(summary.overallScore)}
+              </span>
+              <span className="text-base font-bold text-white/80">/ 100</span>
+            </div>
+            <p className="text-xs text-white/80 mt-1 leading-normal">
+              Composite delivery rubric across all 6 analytical dimensions.
             </p>
           </div>
-          <div className="w-full bg-[var(--surface-2)] h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#1F4E79] h-full rounded-full" style={{ width: `${summary.similarity}%` }} />
+          <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+            <div
+              className="bg-white h-full rounded-full transition-all duration-700"
+              style={{ width: `${Math.round(summary.overallScore)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* 3 White Analytic Tiles */}
+        <Card className="p-6 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-text-muted">
+              Pacing & alignment
+            </span>
+            <Percent className="w-4 h-4 text-teal" />
+          </div>
+          <div className="my-4">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-extrabold text-text tabular-nums">
+                {summary.similarity}%
+              </span>
+            </div>
+            <p className="text-xs text-text-muted mt-1 leading-normal">
+              Cadence and syllable tempo alignment with reference model.
+            </p>
+          </div>
+          <div className="w-full bg-surface-2 h-2 rounded-full overflow-hidden border border-border">
+            <div className="bg-teal h-full rounded-full" style={{ width: `${summary.similarity}%` }} />
           </div>
         </Card>
 
-        <Card className="p-5 flex flex-col justify-between">
+        <Card className="p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              Grounding Confidence
+            <span className="text-xs font-bold text-text-muted">
+              Confidence
             </span>
-            <ShieldCheck className="w-4 h-4 text-emerald-700" />
+            <ShieldCheck className="w-4 h-4 text-success" />
           </div>
-          <div className="my-3">
-            <span className="text-3xl font-serif font-bold text-[var(--foreground)]">
-              {summary.confidence}%
-            </span>
-            <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Lexical word alignment density and token timestamp fidelity.
+          <div className="my-4">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-extrabold text-text tabular-nums">
+                {summary.confidence}%
+              </span>
+            </div>
+            <p className="text-xs text-text-muted mt-1 leading-normal">
+              Word recognition density and timestamp alignment fidelity.
             </p>
           </div>
-          <div className="w-full bg-[var(--surface-2)] h-1.5 rounded-full overflow-hidden">
-            <div className="bg-emerald-700 h-full rounded-full" style={{ width: `${summary.confidence}%` }} />
+          <div className="w-full bg-surface-2 h-2 rounded-full overflow-hidden border border-border">
+            <div className="bg-success h-full rounded-full" style={{ width: `${summary.confidence}%` }} />
           </div>
         </Card>
 
-        <Card className="p-5 flex flex-col justify-between">
+        <Card className="p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
-              Delivery Flaws
+            <span className="text-xs font-bold text-text-muted">
+              Flagged moments
             </span>
-            <Activity className="w-4 h-4 text-[var(--series-participant)]" />
+            <Activity className="w-4 h-4 text-accent" />
           </div>
-          <div className="my-3">
-            <span className="text-3xl font-serif font-bold text-[var(--foreground)]">
-              {evaluation.flaws.length}
-            </span>
-            <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Distinct temporal segments with statistically significant deviation.
+          <div className="my-4">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-3xl font-extrabold text-text tabular-nums">
+                {evaluation.flaws.length}
+              </span>
+            </div>
+            <p className="text-xs text-text-muted mt-1 leading-normal">
+              Distinct timestamps with noticeable delivery difference.
             </p>
           </div>
-          <div className="text-xs text-[var(--muted-foreground)] font-mono">
+          <div className="text-xs font-semibold text-text-muted">
             {evaluation.flaws.filter((f) => f.severity === 'HIGH').length} High •{' '}
             {evaluation.flaws.filter((f) => f.severity === 'MEDIUM').length} Medium
           </div>
         </Card>
       </div>
 
-      {/* Executive Diagnostic Callout */}
+      {/* Coach Diagnostic Callout */}
       {evaluation.summaryText && (
-        <Card className="p-5 border-l-4 border-l-[var(--accent)] bg-[var(--surface-2)]">
+        <Card className="p-6 border-l-4 border-l-accent bg-surface-2 shadow-xs">
           <div className="flex items-start gap-3.5">
-            <MessageSquareQuote className="w-5 h-5 text-[var(--accent)] shrink-0 mt-0.5" />
-            <div className="space-y-1.5 flex-1">
+            <MessageSquareQuote className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+            <div className="space-y-2 flex-1">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">
-                  Executive Oratorical Diagnostic
+                <h4 className="text-xs font-bold text-text">
+                  Coach's summary note
                 </h4>
                 {evaluation.detectedSpeakingStyle && (
-                  <span className="text-[11px] font-mono text-[var(--muted-foreground)]">
-                    Profile: {evaluation.detectedSpeakingStyle}
+                  <span className="text-xs font-semibold text-text-muted">
+                    Style: {evaluation.detectedSpeakingStyle}
                   </span>
                 )}
               </div>
-              <p className="text-sm text-[var(--foreground)] leading-relaxed">
+              <p className="text-sm text-text leading-relaxed font-medium">
                 {evaluation.summaryText}
               </p>
-              <div className="flex items-center gap-4 text-xs font-mono text-[var(--muted-foreground)] pt-1">
-                <span>Strongest: <strong className="text-emerald-700 dark:text-emerald-400">{summary.strongestArea}</strong></span>
+              <div className="flex items-center gap-4 text-xs font-semibold text-text-muted pt-1">
+                <span>Strongest area: <strong className="text-success">{summary.strongestArea}</strong></span>
                 <span>•</span>
-                <span>Focus Area: <strong className="text-rose-700 dark:text-rose-400">{summary.weakestArea}</strong></span>
+                <span>Focus area: <strong className="text-danger">{summary.weakestArea}</strong></span>
               </div>
             </div>
           </div>
@@ -380,13 +343,13 @@ export const ResultsPage: React.FC = () => {
       )}
 
       {/* Two-Pane Flaw Explorer */}
-      <section aria-label="Flaw inspector" className="space-y-2">
+      <section aria-label="Flaw inspector" className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-serif font-semibold text-[var(--foreground)]">
-            Temporal Flaw Diagnostics & Coaching
+          <h2 className="text-lg font-bold text-text tracking-tight">
+            Flagged moments & coaching advice
           </h2>
-          <span className="text-xs text-[var(--muted-foreground)] hidden sm:inline">
-            Use <kbd className="px-1 rounded bg-[var(--surface-2)] border text-[10px] font-mono">[</kbd> and <kbd className="px-1 rounded bg-[var(--surface-2)] border text-[10px] font-mono">]</kbd> keys to cycle flaws
+          <span className="text-xs text-text-muted hidden sm:inline font-medium">
+            Use <kbd className="px-1.5 py-0.5 rounded-md bg-surface-2 border border-border text-xs font-semibold">[</kbd> and <kbd className="px-1.5 py-0.5 rounded-md bg-surface-2 border border-border text-xs font-semibold">]</kbd> keys to cycle moments
           </span>
         </div>
 
@@ -407,15 +370,15 @@ export const ResultsPage: React.FC = () => {
                 isFocused={true}
               />
             ) : (
-              <Card className="p-8 text-center text-xs text-[var(--muted-foreground)]">
-                Select a flaw from the index to review its causal acoustic measurements and coaching guidance.
+              <Card className="p-8 text-center text-xs text-text-muted">
+                Select a flagged moment from the index to review observations and coaching guidance.
               </Card>
             )}
           </div>
         </div>
       </section>
 
-      {/* Acoustic Trajectory Chart */}
+      {/* Delivery Curves Chart */}
       {features && (
         <section aria-label="Acoustic curves">
           <FeatureChart

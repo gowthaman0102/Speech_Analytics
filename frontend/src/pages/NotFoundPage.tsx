@@ -8,31 +8,33 @@ export const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-6 text-center">
-      <Card className="max-w-md w-full p-8 text-center">
-        <FileQuestion className="w-10 h-10 text-[var(--muted-foreground)] mx-auto mb-3" />
-        <h1 className="text-xl font-serif font-bold text-[var(--foreground)] tracking-tight">
-          Page Not Found
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-6 text-center">
+      <Card className="max-w-md w-full p-8 text-center space-y-4">
+        <div className="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center mx-auto text-text-muted">
+          <FileQuestion className="w-6 h-6 text-accent" />
+        </div>
+        <h1 className="text-2xl font-extrabold text-text tracking-tight">
+          Page not found
         </h1>
-        <p className="text-xs text-[var(--muted-foreground)] mt-2 leading-relaxed">
+        <p className="text-sm text-text-muted leading-relaxed">
           The requested page does not exist or may have been relocated.
         </p>
 
-        <div className="mt-6 flex items-center justify-center gap-3">
+        <div className="pt-2 flex items-center justify-center gap-3">
           <Button
             variant="primary"
             onClick={() => navigate('/')}
-            className="flex items-center gap-1.5 text-xs"
+            className="flex items-center gap-2 text-xs"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Return Home</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to overview</span>
           </Button>
           <Button
             variant="secondary"
             onClick={() => navigate('/evaluations')}
             className="text-xs"
           >
-            Evaluations
+            History
           </Button>
         </div>
       </Card>

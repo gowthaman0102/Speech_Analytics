@@ -26,7 +26,7 @@ export const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <div className="min-h-screen bg-[var(--bg)] text-[var(--foreground)] flex flex-col font-sans antialiased selection:bg-[var(--accent)] selection:text-white">
+        <div className="min-h-screen bg-bg text-text flex flex-col font-sans antialiased selection:bg-accent selection:text-white">
           <Navbar />
 
           <main className="flex-1">

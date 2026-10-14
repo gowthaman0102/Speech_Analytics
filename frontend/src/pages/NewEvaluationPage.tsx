@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Sparkles, ChevronDown, ChevronUp, Mic, Video, UploadCloud, CheckCircle2 } from 'lucide-react';
+import { FileText, Sparkles, ChevronDown, ChevronUp, Mic, Video, ArrowRight } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { Dropzone } from '../components/ui/Dropzone';
@@ -29,9 +29,6 @@ export const NewEvaluationPage: React.FC = () => {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Client validation: only the media file is required!
-  const isValid = mediaFile !== null;
 
   const handleImportTxt = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,22 +93,15 @@ export const NewEvaluationPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[720px] mx-auto px-6 py-12 space-y-8 text-left">
+    <div className="max-w-[720px] mx-auto px-6 py-10 md:py-14 space-y-8 text-left">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-[--accent-soft] text-[--accent]">
-              Zero Reference Required
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-[--text] tracking-tight">
-            Evaluate Your Speech Delivery
-          </h1>
-          <p className="text-sm text-[--text-muted] mt-1.5 leading-relaxed">
-            Upload your audio or video recording. SpeechScope automatically transcribes your words, classifies communicative intent, and detects grounded delivery flaws.
-          </p>
-        </div>
+      <div className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-text tracking-tight">
+          New speech evaluation
+        </h1>
+        <p className="text-sm text-text-muted leading-relaxed">
+          Upload a recording of the speaker's delivery. SpeechScope automatically transcribes the words, measures vocal melody and cadence, and flags moments that need attention.
+        </p>
       </div>
 
       {error && (
@@ -120,10 +110,10 @@ export const NewEvaluationPage: React.FC = () => {
         </Banner>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8 divide-y divide-[--border]">
+      <form onSubmit={handleSubmit} className="space-y-8 divide-y divide-border">
         {/* Section 1: Details & Category */}
         <div className="space-y-4 pt-1 first:pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Speech title"
               placeholder="e.g. Environmental Leadership Oratory"
@@ -133,13 +123,13 @@ export const NewEvaluationPage: React.FC = () => {
             />
 
             <div className="space-y-1.5 text-left">
-              <label className="block text-sm font-medium text-[--text]">
-                Oratorical category
+              <label className="block text-sm font-semibold text-text">
+                Speaking category
               </label>
               <select
                 value={speechType}
                 onChange={(e) => setSpeechType(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[--surface] border border-[--border-strong] rounded-[6px] text-[--text] focus:outline-none focus:ring-2 focus:ring-[--accent] focus:border-transparent transition-all"
+                className="w-full h-10 px-3.5 text-sm bg-surface border border-border rounded-xl text-text focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all cursor-pointer"
               >
                 {SPEECH_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -147,8 +137,8 @@ export const NewEvaluationPage: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-[--text-muted]">
-                Calibrates tone and prosodic range expectations.
+              <p className="text-xs text-text-muted">
+                Calibrates delivery expectations for this style.
               </p>
             </div>
           </div>
@@ -156,22 +146,22 @@ export const NewEvaluationPage: React.FC = () => {
 
         {/* Section 2: Media Upload */}
         <div className="space-y-4 pt-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h2 className="text-sm font-semibold text-[--text] flex items-center gap-1.5">
-                <Mic className="h-4 w-4 text-[--accent]" />
-                <span>Participant speech recording</span>
+              <h2 className="text-sm font-bold text-text flex items-center gap-1.5">
+                <Mic className="h-4 w-4 text-accent" />
+                <span>Speech recording</span>
               </h2>
-              <p className="text-xs text-[--text-muted] mt-0.5">
-                Upload audio or video. Audio track is automatically extracted at 16 kHz mono PCM.
+              <p className="text-xs text-text-muted mt-0.5">
+                Upload participant audio or video. Audio track is extracted automatically.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-[--text-muted]">
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[--surface-2]">
-                <Mic className="h-3 w-3" /> Audio
+            <div className="flex items-center gap-2 text-xs text-text-muted font-medium">
+              <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-2 border border-border">
+                <Mic className="h-3 w-3 text-accent" /> Audio
               </span>
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[--surface-2]">
-                <Video className="h-3 w-3" /> Video
+              <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-2 border border-border">
+                <Video className="h-3 w-3 text-teal" /> Video
               </span>
             </div>
           </div>
@@ -191,26 +181,26 @@ export const NewEvaluationPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowTranscriptOption(!showTranscriptOption)}
-            className="flex items-center justify-between w-full text-left py-1 text-sm font-medium text-[--text] hover:text-[--accent] transition-colors"
+            className="flex items-center justify-between w-full text-left py-1 text-sm font-semibold text-text hover:text-accent transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[--text-muted]" />
+              <FileText className="h-4 w-4 text-text-muted" />
               <span>Have a prepared reference transcript? (Optional)</span>
             </span>
             {showTranscriptOption ? (
-              <ChevronUp className="h-4 w-4 text-[--text-muted]" />
+              <ChevronUp className="h-4 w-4 text-text-muted" />
             ) : (
-              <ChevronDown className="h-4 w-4 text-[--text-muted]" />
+              <ChevronDown className="h-4 w-4 text-text-muted" />
             )}
           </button>
 
           {showTranscriptOption && (
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-[--text-muted]">
-                  Leave blank to allow automatic Whisper transcription. If provided, alignment will check verbatim accuracy.
+                <p className="text-xs text-text-muted">
+                  Leave blank to generate transcription automatically, or paste the intended text.
                 </p>
-                <label className="text-xs text-[--accent] hover:text-[--accent-hover] font-medium cursor-pointer inline-flex items-center gap-1">
+                <label className="text-xs text-accent hover:text-accent-hover font-semibold cursor-pointer inline-flex items-center gap-1">
                   <FileText className="h-3.5 w-3.5" />
                   <span>Import .txt</span>
                   <input type="file" accept=".txt" className="hidden" onChange={handleImportTxt} />
@@ -218,8 +208,8 @@ export const NewEvaluationPage: React.FC = () => {
               </div>
 
               <Textarea
-                rows={6}
-                placeholder="Optional: Paste the prepared transcript text here…"
+                rows={5}
+                placeholder="Paste the prepared speech text here…"
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
                 showWordCount={true}
@@ -238,10 +228,10 @@ export const NewEvaluationPage: React.FC = () => {
                   variant="primary"
                   size="lg"
                   loading={loading}
-                  className="gap-2 bg-[--accent] text-white px-6 py-3 text-base font-semibold shadow-sm w-full sm:w-auto"
+                  className="gap-2 px-6 shadow-sm w-full sm:w-auto"
                 >
-                  <Sparkles className="h-5 w-5" />
-                  <span>Upload & Evaluate "{mediaFile.name}"</span>
+                  <Sparkles className="h-4 w-4" />
+                  <span>Run evaluation</span>
                 </Button>
               ) : (
                 <Button
@@ -249,10 +239,10 @@ export const NewEvaluationPage: React.FC = () => {
                   variant="primary"
                   size="lg"
                   onClick={() => document.getElementById('media-dropzone-input')?.click()}
-                  className="gap-2 px-6 py-3 text-base font-semibold shadow-sm w-full sm:w-auto"
+                  className="gap-2 px-6 shadow-sm w-full sm:w-auto"
                 >
-                  <UploadCloud className="h-5 w-5" />
-                  <span>Choose Speech File to Upload</span>
+                  <span>Choose speech file</span>
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -264,23 +254,21 @@ export const NewEvaluationPage: React.FC = () => {
               disabled={loading}
               onClick={handleReset}
             >
-              Reset form
+              Reset
             </Button>
           </div>
 
-          {/* Alternative Demo Option */}
-          <div className="pt-4 border-t border-[--border] flex items-center justify-between flex-wrap gap-2 text-xs text-[--text-muted]">
-            <span>
-              Don't have your own speech audio ready?
-            </span>
+          {/* Single clean sample recordings entry point below form */}
+          <div className="pt-4 border-t border-border flex items-center justify-between flex-wrap gap-2 text-xs text-text-muted">
+            <span>Don't have your own audio ready?</span>
             <button
               type="button"
               onClick={handleUseSampleData}
               disabled={loading}
-              className="text-[--accent] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+              className="text-accent hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
             >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Test with built-in sample demo speech</span>
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+              <span>Use sample recordings</span>
             </button>
           </div>
         </div>

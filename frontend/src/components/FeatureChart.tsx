@@ -11,6 +11,7 @@ import {
   ReferenceArea,
 } from 'recharts';
 import { Card } from './ui/Card';
+import { Badge } from './ui/Badge';
 import type { FeatureTimeSeries } from '../types';
 
 interface FeatureChartProps {
@@ -21,14 +22,12 @@ interface FeatureChartProps {
 export const FeatureChart: React.FC<FeatureChartProps> = ({ data, selectedFlawTime }) => {
   const [activeMetric, setActiveMetric] = useState<'pitch' | 'rms' | 'wpm' | 'deviations'>('pitch');
 
-  // Format seconds to mm:ss
   const formatTimeTick = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${mins}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Prepare chart rows
   const timePoints = data?.timePoints || [];
   const refPitch = data?.referenceFeatures?.pitch || [];
   const partPitch = data?.participantFeatures?.pitch || [];
@@ -51,78 +50,78 @@ export const FeatureChart: React.FC<FeatureChartProps> = ({ data, selectedFlawTi
 
   const metricsConfig = {
     pitch: {
-      title: 'Fundamental Frequency / Pitch (F0)',
+      title: 'Melody & Pitch Contour',
       yUnit: 'Hz',
       refKey: 'refPitch',
       partKey: 'partPitch',
-      refName: 'Reference Pitch (Hz)',
-      partName: 'Participant Pitch (Hz)',
-      description: 'Monitors intonational variety and vocal modulation over aligned tokens.',
+      refName: 'Reference pitch (Hz)',
+      partName: 'Participant pitch (Hz)',
+      description: 'Tracks inflection, intonation, and vocal melody across aligned words.',
     },
     rms: {
-      title: 'Vocal Energy & Amplitude (RMS)',
+      title: 'Dynamic Energy & Projection',
       yUnit: 'RMS',
       refKey: 'refRms',
       partKey: 'partRms',
-      refName: 'Reference Energy',
-      partName: 'Participant Energy',
-      description: 'Quantifies vocal projection and dynamic volume emphasis across sentences.',
+      refName: 'Reference energy',
+      partName: 'Participant energy',
+      description: 'Measures vocal projection and dynamic volume emphasis throughout the speech.',
     },
     wpm: {
-      title: 'Speaking Rate Cadence (Words Per Minute)',
+      title: 'Speaking Pace & Rhythm',
       yUnit: 'WPM',
       refKey: 'refWpm',
       partKey: 'partWpm',
-      refName: 'Reference Cadence (WPM)',
-      partName: 'Participant Cadence (WPM)',
-      description: 'Measures localized speed. Deviations exceeding ±20% qualify as rushed or dragging delivery.',
+      refName: 'Reference pace (WPM)',
+      partName: 'Participant pace (WPM)',
+      description: 'Measures localized speed. Highlights rushed phrases or dragging delivery.',
     },
     deviations: {
-      title: 'Composite Deviation Vector',
-      yUnit: 'Dev',
+      title: 'Overall Delivery Difference',
+      yUnit: 'Score',
       refKey: 'deviation',
       partKey: '',
-      refName: 'Deviation Score (0.0 – 1.0)',
+      refName: 'Difference score (0.0 – 1.0)',
       partName: '',
-      description: 'Multi-feature weighted deviation metric. Spikes above threshold denote flagged delivery flaws.',
+      description: 'Combined delivery difference curve. Spikes above threshold denote flagged moments.',
     },
   }[activeMetric];
 
   return (
     <Card className="p-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--border)]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
+            <h3 className="text-base font-bold text-text tracking-tight">
               {metricsConfig.title}
             </h3>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--muted-foreground)] border border-[var(--border)]">
-              Acoustic Curves
-            </span>
+            <Badge variant="teal" size="sm">
+              Delivery curves
+            </Badge>
           </div>
-          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+          <p className="text-xs text-text-muted mt-1">
             {metricsConfig.description}
           </p>
         </div>
 
         {/* Metric Selector Tabs */}
-        <div className="flex rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-0.5 text-xs font-medium">
+        <div className="flex rounded-xl border border-border bg-surface-2 p-1 text-xs font-semibold">
           {(
             [
-              { key: 'pitch', label: 'Pitch (F0)' },
-              { key: 'rms', label: 'Loudness (RMS)' },
-              { key: 'wpm', label: 'Cadence (WPM)' },
-              { key: 'deviations', label: 'Deviation Score' },
+              { key: 'pitch', label: 'Pitch / Melody' },
+              { key: 'rms', label: 'Energy' },
+              { key: 'wpm', label: 'Pace' },
+              { key: 'deviations', label: 'Difference curve' },
             ] as const
           ).map((item) => (
             <button
               key={item.key}
               type="button"
               onClick={() => setActiveMetric(item.key)}
-              className={`px-3 py-1 rounded transition-colors ${
+              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                 activeMetric === item.key
-                  ? 'bg-[var(--surface)] text-[var(--foreground)] font-semibold shadow-xs'
-                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  ? 'bg-surface text-text font-bold shadow-xs'
+                  : 'text-text-muted hover:text-text'
               }`}
             >
               {item.label}
@@ -135,19 +134,19 @@ export const FeatureChart: React.FC<FeatureChartProps> = ({ data, selectedFlawTi
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E3E0D8" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#EBD8C4" vertical={false} />
 
             <XAxis
               dataKey="time"
-              stroke="#6B6860"
-              fontSize={11}
+              stroke="#7A6552"
+              fontSize={12}
               tickLine={false}
               tickFormatter={formatTimeTick}
             />
 
             <YAxis
-              stroke="#6B6860"
-              fontSize={11}
+              stroke="#7A6552"
+              fontSize={12}
               tickLine={false}
               unit={` ${metricsConfig.yUnit}`}
               width={55}
@@ -157,16 +156,16 @@ export const FeatureChart: React.FC<FeatureChartProps> = ({ data, selectedFlawTi
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-md shadow-sm text-xs space-y-1">
-                      <p className="font-mono text-[var(--muted-foreground)] font-medium mb-1">
+                    <div className="bg-surface border-[1.5px] border-border p-3.5 rounded-xl shadow-xs text-xs space-y-1.5">
+                      <p className="text-text-muted font-bold mb-1">
                         Time: {label}s ({formatTimeTick(Number(label))})
                       </p>
                       {payload.map((entry, idx) => (
                         <div key={idx} className="flex items-center justify-between gap-4">
-                          <span style={{ color: entry.color }} className="font-medium">
+                          <span style={{ color: entry.color }} className="font-semibold">
                             {entry.name}:
                           </span>
-                          <span className="font-mono font-semibold text-[var(--foreground)]">
+                          <span className="font-bold text-text tabular-nums">
                             {entry.value} {metricsConfig.yUnit}
                           </span>
                         </div>
@@ -179,8 +178,8 @@ export const FeatureChart: React.FC<FeatureChartProps> = ({ data, selectedFlawTi
             />
 
             <Legend
-              wrapperStyle={{ paddingTop: 12, fontSize: 12 }}
-              formatter={(value) => <span className="text-[var(--foreground)]">{value}</span>}
+              wrapperStyle={{ paddingTop: 14, fontSize: 13 }}
+              formatter={(value) => <span className="text-text font-semibold">{value}</span>}
             />
 
             {/* Selected flaw region shading */}
@@ -188,53 +187,53 @@ export const FeatureChart: React.FC<FeatureChartProps> = ({ data, selectedFlawTi
               <ReferenceArea
                 x1={selectedFlawTime.start}
                 x2={selectedFlawTime.end}
-                fill="#C2571A"
-                fillOpacity={0.12}
-                stroke="#C2571A"
-                strokeOpacity={0.4}
+                fill="#C2562D"
+                fillOpacity={0.15}
+                stroke="#C2562D"
+                strokeOpacity={0.5}
                 strokeDasharray="3 3"
               />
             )}
 
-            {/* Series lines */}
+            {/* Series lines: 2.5px thick, dot={false} */}
             {activeMetric !== 'deviations' ? (
               <>
                 <Line
                   type="monotone"
                   dataKey={metricsConfig.refKey}
                   name={metricsConfig.refName}
-                  stroke="#1F4E79"
-                  strokeWidth={2}
+                  stroke="#2F6F73"
+                  strokeWidth={2.5}
                   dot={false}
-                  activeDot={{ r: 4, stroke: '#1F4E79', strokeWidth: 1 }}
+                  activeDot={{ r: 4, stroke: '#2F6F73', strokeWidth: 1 }}
                 />
                 <Line
                   type="monotone"
                   dataKey={metricsConfig.partKey}
                   name={metricsConfig.partName}
-                  stroke="#C2571A"
-                  strokeWidth={2}
+                  stroke="#C2562D"
+                  strokeWidth={2.5}
                   dot={false}
-                  activeDot={{ r: 4, stroke: '#C2571A', strokeWidth: 1 }}
+                  activeDot={{ r: 4, stroke: '#C2562D', strokeWidth: 1 }}
                 />
               </>
             ) : (
               <Line
                 type="monotone"
                 dataKey="deviation"
-                name="Temporal Deviation Score"
-                stroke="#C2571A"
-                strokeWidth={2}
+                name="Delivery difference"
+                stroke="#C2562D"
+                strokeWidth={2.5}
                 dot={false}
-                activeDot={{ r: 4, stroke: '#C2571A', strokeWidth: 1 }}
+                activeDot={{ r: 4, stroke: '#C2562D', strokeWidth: 1 }}
               />
             )}
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-3 text-right text-[11px] text-[var(--muted-foreground)]">
-        Aligned timepoints synchronized via Dynamic Time Warping (DTW)
+      <div className="mt-4 text-right text-xs text-text-muted">
+        Timepoints synchronized across deliveries
       </div>
     </Card>
   );

@@ -3,6 +3,7 @@ import WaveSurfer from 'wavesurfer.js';
 import { Play, Pause, RotateCcw, Volume2, VolumeX, Lock, Unlock } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
 import type { FlawSegment } from '../types';
 
 interface WaveformComparisonProps {
@@ -41,14 +42,14 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
     const wsRef = WaveSurfer.create({
       container: refContainerRef.current,
-      waveColor: '#A6C8E0',
-      progressColor: '#1F4E79',
-      cursorColor: '#1F4E79',
+      waveColor: '#8FBDBD',
+      progressColor: '#2F6F73',
+      cursorColor: '#2F6F73',
       cursorWidth: 2,
       height: 64,
-      barWidth: 2,
-      barGap: 2,
-      barRadius: 2,
+      barWidth: 3,
+      barGap: 3,
+      barRadius: 3,
       normalize: true,
       url: referenceAudioUrl,
     });
@@ -66,14 +67,14 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
     const wsPart = WaveSurfer.create({
       container: partContainerRef.current,
-      waveColor: '#E8B896',
-      progressColor: '#C2571A',
-      cursorColor: '#C2571A',
+      waveColor: '#E8A98F',
+      progressColor: '#C2562D',
+      cursorColor: '#C2562D',
       cursorWidth: 2,
       height: 64,
-      barWidth: 2,
-      barGap: 2,
-      barRadius: 2,
+      barWidth: 3,
+      barGap: 3,
+      barRadius: 3,
       normalize: true,
       url: participantAudioUrl,
     });
@@ -131,14 +132,14 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
     const partWs = partWaveSurfer.current;
     const refWs = refWaveSurfer.current;
 
-    if (!partWs || !refWs) return;
+    if (!partWs) return;
 
     if (isPlaying) {
       partWs.pause();
-      refWs.pause();
+      if (refWs) refWs.pause();
     } else {
-      if (activeTrack === 'participant') {
-        refWs.pause();
+      if (activeTrack === 'participant' || !refWs) {
+        if (refWs) refWs.pause();
         partWs.play();
       } else if (activeTrack === 'reference') {
         partWs.pause();
@@ -185,34 +186,34 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
   return (
     <Card className="p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--border)]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
-              Waveform Alignment & Flaw Markers
+            <h3 className="text-base font-bold text-text tracking-tight">
+              Waveform alignment & flagged moments
             </h3>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--muted-foreground)] border border-[var(--border)]">
+            <Badge variant="teal" size="sm">
               Interactive
-            </span>
+            </Badge>
           </div>
-          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-            Click any flaw region or wave position to seek. Press <kbd className="px-1 py-0.5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[10px] font-mono">Space</kbd> to toggle playback.
+          <p className="text-xs text-text-muted mt-1">
+            Click any flagged region or waveform position to listen. Press Space to toggle playback.
           </p>
         </div>
 
-        {/* Track selector (only when reference audio exists) */}
+        {/* Track selector (when reference audio exists) */}
         {referenceAudioUrl && (
-          <div className="flex items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-0.5 text-xs">
+          <div className="flex items-center rounded-xl border border-border bg-surface-2 p-1 text-xs">
             <button
               type="button"
               onClick={() => {
                 setActiveTrack('participant');
                 if (refWaveSurfer.current) refWaveSurfer.current.pause();
               }}
-              className={`px-3 py-1 rounded transition-colors ${
+              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                 activeTrack === 'participant'
-                  ? 'bg-[var(--surface)] text-[var(--series-participant)] font-medium shadow-xs'
-                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  ? 'bg-surface text-accent font-bold shadow-xs'
+                  : 'text-text-muted hover:text-text'
               }`}
             >
               Participant
@@ -223,10 +224,10 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
                 setActiveTrack('reference');
                 if (partWaveSurfer.current) partWaveSurfer.current.pause();
               }}
-              className={`px-3 py-1 rounded transition-colors ${
+              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
                 activeTrack === 'reference'
-                  ? 'bg-[var(--surface)] text-[var(--series-ref)] font-medium shadow-xs'
-                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  ? 'bg-surface text-teal font-bold shadow-xs'
+                  : 'text-text-muted hover:text-text'
               }`}
             >
               Reference
@@ -236,14 +237,14 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
               onClick={() => {
                 setActiveTrack('both');
               }}
-              className={`px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
+              className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer ${
                 activeTrack === 'both'
-                  ? 'bg-[var(--surface)] text-[var(--foreground)] font-medium shadow-xs'
-                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  ? 'bg-surface text-text font-bold shadow-xs'
+                  : 'text-text-muted hover:text-text'
               }`}
-              title="Lock Playheads: Play both tracks simultaneously"
+              title="Lock playheads: Play both tracks simultaneously"
             >
-              {activeTrack === 'both' ? <Lock className="w-3 h-3 text-[var(--accent)]" /> : <Unlock className="w-3 h-3" />}
+              {activeTrack === 'both' ? <Lock className="w-3.5 h-3.5 text-accent" /> : <Unlock className="w-3.5 h-3.5" />}
               <span>Lock</span>
             </button>
           </div>
@@ -252,44 +253,44 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
       {/* Waveform Displays */}
       <div className="space-y-4">
-        {/* Reference Waveform (only when reference audio exists) */}
+        {/* Reference Waveform */}
         {referenceAudioUrl && (
-          <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
-            <div className="flex items-center justify-between mb-2">
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#1F4E79]" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-[#1F4E79]">
-                  Reference Delivery
+                <span className="w-2.5 h-2.5 rounded-full bg-teal" />
+                <span className="text-xs font-bold text-teal">
+                  Reference reading
                 </span>
               </div>
-              <span className="text-xs text-[var(--muted-foreground)]">Baseline Archetype</span>
+              <span className="text-xs text-text-muted">Target model</span>
             </div>
-            <div className="rounded bg-[var(--surface-2)] p-2">
+            <div className="rounded-xl bg-surface-2 p-2.5 border border-border">
               <div ref={refContainerRef} className="cursor-pointer" />
             </div>
           </div>
         )}
 
         {/* Participant Waveform with Flaws Overlay */}
-        <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
-          <div className="flex items-center justify-between mb-2">
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#C2571A]" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#C2571A]">
-                Participant Delivery
+              <span className="w-2.5 h-2.5 rounded-full bg-accent" />
+              <span className="text-xs font-bold text-accent">
+                Participant delivery
               </span>
             </div>
-            <span className="text-xs text-[var(--muted-foreground)]">
-              {flaws.length} Flaw Region{flaws.length === 1 ? '' : 's'}
+            <span className="text-xs text-text-muted">
+              {flaws.length} flagged moment{flaws.length === 1 ? '' : 's'}
             </span>
           </div>
 
-          <div className="relative rounded bg-[var(--surface-2)] p-2">
+          <div className="relative rounded-xl bg-surface-2 p-2.5 border border-border">
             <div ref={partContainerRef} className="cursor-pointer" />
 
             {/* Visual Flaw Overlay Bands */}
             {duration > 0 && (
-              <div className="absolute inset-y-2 inset-x-2 pointer-events-none">
+              <div className="absolute inset-y-2.5 inset-x-2.5 pointer-events-none">
                 {flaws.map((flaw) => {
                   const left = (flaw.start / duration) * 100;
                   const width = ((flaw.end - flaw.start) / duration) * 100;
@@ -297,10 +298,10 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
                   const colorClass =
                     flaw.severity === 'HIGH'
-                      ? 'bg-rose-500/20 border-rose-500/70 text-rose-900'
+                      ? 'bg-danger/20 border-danger text-danger'
                       : flaw.severity === 'MEDIUM'
-                      ? 'bg-amber-500/20 border-amber-500/70 text-amber-900'
-                      : 'bg-yellow-500/20 border-yellow-500/60 text-yellow-900';
+                      ? 'bg-flaw-medium/20 border-flaw-medium text-flaw-medium'
+                      : 'bg-flaw-low/20 border-flaw-low text-text';
 
                   return (
                     <div
@@ -309,16 +310,16 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
                         e.stopPropagation();
                         onSelectFlaw?.(flaw.id);
                       }}
-                      style={{ left: `${left}%`, width: `${Math.max(1.8, width)}%` }}
+                      style={{ left: `${left}%`, width: `${Math.max(2, width)}%` }}
                       className={`absolute top-0 bottom-0 pointer-events-auto cursor-pointer border-x transition-all group ${colorClass} ${
                         isSelected
-                          ? 'ring-2 ring-[var(--foreground)] ring-offset-1 bg-rose-500/35 z-10'
+                          ? 'ring-2 ring-accent ring-offset-1 bg-accent/30 z-10'
                           : 'hover:brightness-95'
                       }`}
                       title={`${flaw.type} (${formatTime(flaw.start)} – ${formatTime(flaw.end)})`}
                     >
-                      <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] text-[11px] font-medium px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-20 transition-opacity">
-                        {flaw.type.replace(/_/g, ' ')} (+{(flaw.duration ?? (flaw.end - flaw.start)).toFixed(1)}s)
+                      <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-surface border border-border text-text text-xs font-bold px-2 py-0.5 rounded-md shadow-xs whitespace-nowrap z-20 transition-opacity">
+                        {flaw.type.replace(/_/g, ' ')} ({(flaw.duration ?? (flaw.end - flaw.start)).toFixed(1)}s)
                       </div>
                     </div>
                   );
@@ -330,12 +331,12 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
       </div>
 
       {/* Transport Controls Bar */}
-      <div className="mt-4 pt-4 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-4">
+      <div className="mt-5 pt-4 border-t border-border flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Button
             variant="primary"
             onClick={togglePlay}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs"
+            className="flex items-center gap-1.5 px-4 text-xs"
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
@@ -354,7 +355,7 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
           <Button
             variant="secondary"
             onClick={handleRestart}
-            className="p-2 text-xs"
+            className="p-2.5 text-xs"
             title="Restart from beginning"
             aria-label="Restart"
           >
@@ -364,33 +365,33 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
           <Button
             variant="secondary"
             onClick={toggleMute}
-            className="p-2 text-xs"
+            className="p-2.5 text-xs"
             title={isMuted ? 'Unmute' : 'Mute'}
             aria-label={isMuted ? 'Unmute' : 'Mute'}
           >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-600" /> : <Volume2 className="w-3.5 h-3.5" />}
+            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-danger" /> : <Volume2 className="w-3.5 h-3.5" />}
           </Button>
 
           {/* Time Readout */}
-          <div className="font-mono text-xs px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] ml-2">
-            <span className="font-semibold">{formatTime(currentTime)}</span>
-            <span className="text-[var(--muted-foreground)]"> / {formatTime(duration)}</span>
+          <div className="tabular-nums text-xs px-3 py-1.5 rounded-xl bg-surface-2 border border-border text-text ml-2">
+            <span className="font-bold">{formatTime(currentTime)}</span>
+            <span className="text-text-muted"> / {formatTime(duration)}</span>
           </div>
         </div>
 
         {/* Playback speed selector & legend */}
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1">
-            <span className="text-[var(--muted-foreground)] mr-1">Speed:</span>
+            <span className="text-text-muted mr-1">Speed:</span>
             {[0.75, 1.0, 1.25, 1.5].map((rate) => (
               <button
                 key={rate}
                 type="button"
                 onClick={() => handleRateChange(rate)}
-                className={`px-1.5 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                className={`px-2 py-0.5 rounded-lg text-xs tabular-nums font-bold transition-colors cursor-pointer ${
                   playbackRate === rate
-                    ? 'bg-[var(--accent)] text-white font-medium'
-                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                    ? 'bg-accent text-white'
+                    : 'text-text-muted hover:text-text'
                 }`}
               >
                 {rate}x
@@ -398,13 +399,13 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
             ))}
           </div>
 
-          <div className="hidden sm:flex items-center gap-3 text-[11px] text-[var(--muted-foreground)] border-l border-[var(--border)] pl-4">
+          <div className="hidden sm:flex items-center gap-3 text-xs text-text-muted border-l border-border pl-4">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/40 border border-rose-500" />
-              <span>High Flaw</span>
+              <span className="w-2.5 h-2.5 rounded-sm bg-danger/40 border border-danger" />
+              <span>High flag</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/40 border border-amber-500" />
+              <span className="w-2.5 h-2.5 rounded-sm bg-flaw-medium/40 border border-flaw-medium" />
               <span>Medium</span>
             </div>
           </div>

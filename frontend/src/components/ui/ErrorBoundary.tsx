@@ -34,20 +34,20 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-[60vh] flex items-center justify-center p-6 text-center">
-          <div className="max-w-md w-full p-8 rounded-[8px] bg-[--surface] border border-[--border] text-left space-y-4">
-            <div className="w-10 h-10 rounded-full bg-[--danger-soft] text-[--danger] flex items-center justify-center">
+          <div className="max-w-md w-full p-8 rounded-2xl bg-surface border-[1.5px] border-border text-left space-y-4 shadow-[0_1px_0_rgba(120,80,40,0.08)]">
+            <div className="w-10 h-10 rounded-full bg-danger-soft text-danger flex items-center justify-center">
               <AlertTriangle className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-[--text] tracking-tight">
+              <h2 className="text-lg font-bold text-text tracking-tight">
                 Something went wrong
               </h2>
-              <p className="text-xs text-[--text-muted] mt-1 leading-relaxed">
+              <p className="text-xs text-text-muted mt-1 leading-relaxed">
                 An unexpected interface error occurred. You can return to the overview page or reload.
               </p>
             </div>
             {this.state.error && (
-              <pre className="p-3 bg-[--surface-2] rounded text-[11px] font-mono text-[--text-muted] overflow-x-auto">
+              <pre className="p-3 bg-surface-2 rounded-xl text-xs text-text-muted overflow-x-auto">
                 {this.state.error.message}
               </pre>
             )}

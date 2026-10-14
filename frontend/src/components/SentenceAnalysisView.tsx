@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Play, Volume2, CheckCircle2, AlertTriangle, HelpCircle, ChevronRight, MessageSquareQuote } from 'lucide-react';
+import { Play, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
 import type { SentenceAnalysisItem } from '../types';
 
 interface SentenceAnalysisViewProps {
@@ -10,42 +11,21 @@ interface SentenceAnalysisViewProps {
   activeTime?: number | null;
 }
 
-const getIntentBadge = (intent: string) => {
+const getIntentBadgeVariant = (intent: string): 'danger' | 'accent' | 'teal' | 'warning' | 'default' => {
   const i = intent.toLowerCase();
   if (i.includes('urgent') || i.includes('call_to_action') || i.includes('action')) {
-    return {
-      label: intent.replace(/_/g, ' '),
-      className: 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/50',
-    };
-  }
-  if (i.includes('question')) {
-    return {
-      label: 'Question',
-      className: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/50',
-    };
+    return 'danger';
   }
   if (i.includes('persuasive') || i.includes('important')) {
-    return {
-      label: intent.replace(/_/g, ' '),
-      className: 'bg-sky-50 text-sky-800 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/50',
-    };
+    return 'accent';
   }
   if (i.includes('motivational') || i.includes('emotional')) {
-    return {
-      label: intent.replace(/_/g, ' '),
-      className: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50',
-    };
+    return 'teal';
   }
-  if (i.includes('serious') || i.includes('reflective') || i.includes('conclusion')) {
-    return {
-      label: intent.replace(/_/g, ' '),
-      className: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50',
-    };
+  if (i.includes('serious') || i.includes('reflective') || i.includes('conclusion') || i.includes('question')) {
+    return 'warning';
   }
-  return {
-    label: intent.replace(/_/g, ' '),
-    className: 'bg-[var(--surface-2)] text-[var(--muted-foreground)] border-[var(--border)]',
-  };
+  return 'default';
 };
 
 export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
@@ -60,23 +40,23 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
   }
 
   return (
-    <Card className="p-6 space-y-5">
+    <Card className="p-6 space-y-5 text-left">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[var(--border)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
-              Sentence-Level Semantic Tone Alignment
+            <h3 className="text-base font-bold text-text tracking-tight">
+              Sentence-by-sentence delivery alignment
             </h3>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--muted-foreground)] border border-[var(--border)]">
-              {sentences.length} Sentences
-            </span>
+            <Badge variant="teal" size="sm">
+              {sentences.length} sentences
+            </Badge>
           </div>
-          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-            Automatic intent inference paired with recommended prosodic ranges vs observed delivery.
+          <p className="text-xs text-text-muted mt-1">
+            Expected delivery for each thought group compared against actual vocal performance.
           </p>
         </div>
-        <span className="text-xs text-[var(--muted-foreground)] font-mono">
+        <span className="text-xs text-text-muted">
           Click any sentence to seek audio playback
         </span>
       </div>
@@ -91,14 +71,9 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
             activeTime >= item.start_time &&
             activeTime <= item.end_time;
 
-          const badge = getIntentBadge(item.primary_intent);
+          const badgeVariant = getIntentBadgeVariant(item.primary_intent);
           const score = Math.round(item.compatibility_score);
-          const scoreColor =
-            score >= 80
-              ? 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-950/40'
-              : score >= 65
-              ? 'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-950/40'
-              : 'text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-300 dark:bg-rose-950/40';
+          const scoreBadgeVariant = score >= 80 ? 'success' : score >= 65 ? 'warning' : 'danger';
 
           const exp = item.expected_delivery;
           const act = item.actual_prosody;
@@ -110,45 +85,41 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                 setSelectedIdx(idx);
                 onSeekTime(item.start_time);
               }}
-              className={`p-4 rounded-lg border transition-all cursor-pointer text-left ${
+              className={`p-5 rounded-xl border transition-all cursor-pointer text-left ${
                 isSelected || isCurrentInPlayback
-                  ? 'bg-[var(--surface-2)] border-[var(--accent)] ring-1 ring-[var(--accent)]'
-                  : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-strong)]'
+                  ? 'bg-surface-2 border-accent shadow-xs ring-2 ring-accent/30'
+                  : 'bg-surface border-border hover:border-border-strong'
               }`}
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 {/* Left: Timing & Intent Badges */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)]">
-                    #{item.sentence_index ?? idx + 1} • {(item.start_time ?? 0).toFixed(1)}s – {(item.end_time ?? 0).toFixed(1)}s
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-surface-2 text-text border border-border tabular-nums">
+                    Sentence {item.sentence_index ?? idx + 1} • {(item.start_time ?? 0).toFixed(1)}s – {(item.end_time ?? 0).toFixed(1)}s
                   </span>
-                  <span
-                    className={`text-[11px] font-medium px-2 py-0.5 rounded border capitalize ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--surface)] text-[var(--muted-foreground)] border border-[var(--border)] capitalize">
+                  <Badge variant={badgeVariant} size="sm">
+                    {item.primary_intent.replace(/_/g, ' ')}
+                  </Badge>
+                  <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-surface text-text-muted border border-border">
                     Role: {item.role}
                   </span>
                 </div>
 
                 {/* Right: Compatibility Score Badge */}
                 <div className="flex items-center gap-2 self-start md:self-auto">
-                  <span
-                    className={`text-xs font-mono font-semibold px-2.5 py-0.5 rounded border flex items-center gap-1 ${scoreColor}`}
-                  >
+                  <Badge variant={scoreBadgeVariant} size="sm">
                     {score >= 70 ? (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1 inline" />
                     ) : (
-                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <AlertTriangle className="w-3.5 h-3.5 mr-1 inline" />
                     )}
-                    <span>{score}% Compatibility</span>
-                  </span>
+                    <span>{score}% match</span>
+                  </Badge>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="p-1 h-7 w-7 text-[var(--muted-foreground)] hover:text-[var(--accent)]"
+                    className="p-1 h-7 w-7 text-text-muted hover:text-accent"
                     onClick={(e) => {
                       e.stopPropagation();
                       onSeekTime(item.start_time ?? 0);
@@ -161,62 +132,62 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
               </div>
 
               {/* Spoken Text */}
-              <div className="mt-2.5">
-                <p className="text-sm font-serif text-[var(--foreground)] leading-relaxed">
+              <div className="mt-3">
+                <p className="text-sm font-medium text-text leading-relaxed">
                   "{item.text}"
                 </p>
               </div>
 
               {/* Acoustic Evidence Grid */}
-              <div className="mt-3 pt-3 border-t border-[var(--border)] grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+              <div className="mt-3.5 pt-3.5 border-t border-border grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                 {/* Cadence / WPM */}
-                <div className="p-2 rounded bg-[var(--surface-2)] border border-[var(--border)]">
-                  <span className="text-[10px] text-[var(--muted-foreground)] block">Speaking Rate</span>
-                  <div className="mt-0.5 flex items-baseline justify-between">
-                    <span className="font-semibold text-[var(--foreground)]">
+                <div className="p-2.5 rounded-xl bg-surface-2 border border-border">
+                  <span className="text-xs text-text-muted block">Speaking rate</span>
+                  <div className="mt-1 flex items-baseline justify-between">
+                    <span className="font-bold text-text tabular-nums">
                       {act?.speech_rate_wpm ? `${act.speech_rate_wpm} WPM` : '—'}
                     </span>
-                    <span className="text-[10px] text-[var(--muted-foreground)]">
+                    <span className="text-xs text-text-muted tabular-nums">
                       {exp?.pace_wpm ? `Target: ${exp.pace_wpm.ideal}` : ''}
                     </span>
                   </div>
                 </div>
 
                 {/* Pitch Modulation */}
-                <div className="p-2 rounded bg-[var(--surface-2)] border border-[var(--border)]">
-                  <span className="text-[10px] text-[var(--muted-foreground)] block">Pitch Modulation</span>
-                  <div className="mt-0.5 flex items-baseline justify-between">
-                    <span className="font-semibold text-[var(--foreground)]">
+                <div className="p-2.5 rounded-xl bg-surface-2 border border-border">
+                  <span className="text-xs text-text-muted block">Pitch modulation</span>
+                  <div className="mt-1 flex items-baseline justify-between">
+                    <span className="font-bold text-text tabular-nums">
                       {typeof act?.pitch_variation === 'number' ? act.pitch_variation.toFixed(3) : '—'}
                     </span>
-                    <span className="text-[10px] text-[var(--muted-foreground)]">
+                    <span className="text-xs text-text-muted tabular-nums">
                       {typeof exp?.pitch_variation?.ideal === 'number' ? `Target: ${exp.pitch_variation.ideal.toFixed(2)}` : ''}
                     </span>
                   </div>
                 </div>
 
                 {/* Energy Projection */}
-                <div className="p-2 rounded bg-[var(--surface-2)] border border-[var(--border)]">
-                  <span className="text-[10px] text-[var(--muted-foreground)] block">Vocal Energy</span>
-                  <div className="mt-0.5 flex items-baseline justify-between">
-                    <span className="font-semibold text-[var(--foreground)]">
+                <div className="p-2.5 rounded-xl bg-surface-2 border border-border">
+                  <span className="text-xs text-text-muted block">Vocal energy</span>
+                  <div className="mt-1 flex items-baseline justify-between">
+                    <span className="font-bold text-text tabular-nums">
                       {typeof act?.normalized_energy === 'number' ? act.normalized_energy.toFixed(2) : '—'}
                     </span>
-                    <span className="text-[10px] text-[var(--muted-foreground)]">
+                    <span className="text-xs text-text-muted tabular-nums">
                       {typeof exp?.energy?.ideal === 'number' ? `Target: ${exp.energy.ideal.toFixed(2)}` : ''}
                     </span>
                   </div>
                 </div>
 
                 {/* Expected Tone Intonation */}
-                <div className="p-2 rounded bg-[var(--surface-2)] border border-[var(--border)]">
-                  <span className="text-[10px] text-[var(--muted-foreground)] block">Intonation Contour</span>
-                  <div className="mt-0.5 flex items-baseline justify-between">
-                    <span className="font-semibold text-[var(--foreground)]">
-                      {exp?.intonation || 'MODULATED'}
+                <div className="p-2.5 rounded-xl bg-surface-2 border border-border">
+                  <span className="text-xs text-text-muted block">Intonation</span>
+                  <div className="mt-1 flex items-baseline justify-between">
+                    <span className="font-bold text-text">
+                      {exp?.intonation || 'Modulated'}
                     </span>
                     {typeof act?.final_pitch_delta_hz === 'number' && (
-                      <span className="text-[10px] text-[var(--muted-foreground)]">
+                      <span className="text-xs text-text-muted tabular-nums">
                         {act.final_pitch_delta_hz >= 0 ? '+' : ''}
                         {act.final_pitch_delta_hz.toFixed(1)} Hz
                       </span>

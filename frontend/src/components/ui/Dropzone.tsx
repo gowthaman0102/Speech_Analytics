@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { UploadCloud, FileAudio, FileVideo, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from './Button';
+import { Badge } from './Badge';
 
 export interface DropzoneProps {
-  label: string;
+  label?: string;
   helperText?: string;
   accept?: string;
   maxSizeBytes?: number;
@@ -15,7 +16,7 @@ export interface DropzoneProps {
 
 export const Dropzone: React.FC<DropzoneProps> = ({
   label,
-  helperText = 'Audio (WAV, MP3, M4A, FLAC) or Video (MP4, MOV, WEBM) up to 100 MB',
+  helperText = 'Audio (.wav, .mp3, .m4a, .flac) or Video (.mp4, .mov, .webm) up to 100 MB',
   accept = '.wav,.mp3,.m4a,.flac,.ogg,.aac,.mp4,.mov,.mkv,.webm,audio/*,video/*',
   maxSizeBytes = 100 * 1024 * 1024,
   file,
@@ -92,8 +93,8 @@ export const Dropzone: React.FC<DropzoneProps> = ({
   };
 
   return (
-    <div className={`space-y-1.5 text-left ${className}`}>
-      {label && <span className="block text-sm font-medium text-[--text]">{label}</span>}
+    <div className={`space-y-2 text-left ${className}`}>
+      {label && <span className="block text-sm font-semibold text-text">{label}</span>}
 
       <input
         ref={inputRef}
@@ -117,23 +118,23 @@ export const Dropzone: React.FC<DropzoneProps> = ({
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`relative p-8 rounded-[8px] border-2 border-dashed transition-all cursor-pointer text-center bg-[--surface] ${
+          className={`relative p-8 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center bg-surface ${
             isDragOver
-              ? 'border-[--accent] bg-[--accent-soft]'
+              ? 'border-accent bg-accent-soft'
               : error
-              ? 'border-[--danger] bg-[--danger-soft]'
-              : 'border-[--border-strong] hover:border-[--accent] hover:bg-[--surface-2]'
+              ? 'border-danger bg-danger-soft'
+              : 'border-border-strong hover:border-accent hover:bg-surface-2'
           }`}
         >
           <div className="flex flex-col items-center justify-center space-y-3">
-            <div className="p-3 rounded-full bg-[--surface-2] text-[--text-muted]">
-              <UploadCloud className="h-6 w-6 text-[--accent]" />
+            <div className="p-3.5 rounded-full bg-surface-2 text-text-muted">
+              <UploadCloud className="h-6 w-6 text-accent" />
             </div>
             <div>
-              <p className="text-base font-semibold text-[--text]">
+              <p className="text-base font-bold text-text">
                 Upload your speech audio or video
               </p>
-              <p className="text-xs text-[--text-muted] mt-1">{helperText}</p>
+              <p className="text-xs text-text-muted mt-1 leading-normal">{helperText}</p>
             </div>
             <Button
               type="button"
@@ -143,37 +144,37 @@ export const Dropzone: React.FC<DropzoneProps> = ({
                 e.stopPropagation();
                 inputRef.current?.click();
               }}
-              className="gap-2 border-[--border-strong] hover:border-[--accent] shadow-xs"
+              className="gap-2"
             >
-              <UploadCloud className="h-4 w-4 text-[--accent]" />
-              <span>Choose Audio / Video File</span>
+              <UploadCloud className="h-4 w-4 text-accent" />
+              <span>Choose audio or video file</span>
             </Button>
           </div>
         </div>
       ) : (
-        <div className="p-5 rounded-[8px] border-2 border-emerald-500/40 bg-[--surface] space-y-4 shadow-xs">
+        <div className="p-5 rounded-xl border-[1.5px] border-teal bg-surface space-y-4 shadow-xs">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 shrink-0">
+              <div className="p-2.5 rounded-xl bg-teal-soft text-teal-text shrink-0">
                 {isVideo ? <FileVideo className="h-6 w-6" /> : <FileAudio className="h-6 w-6" />}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-[--text] truncate">{file.name}</p>
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[--surface-2] text-[--text-muted] uppercase">
+                  <p className="text-sm font-bold text-text truncate">{file.name}</p>
+                  <Badge variant="neutral" size="sm">
                     {isVideo ? 'Video' : 'Audio'}
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    <CheckCircle2 className="h-3 w-3" /> Ready to Evaluate
-                  </span>
+                  </Badge>
+                  <Badge variant="teal" size="sm">
+                    <CheckCircle2 className="h-3 w-3 mr-1 inline" /> Ready to evaluate
+                  </Badge>
                 </div>
-                <p className="text-xs text-[--text-muted] tabular-nums mt-1">
+                <p className="text-xs text-text-muted tabular-nums mt-1">
                   {formatFileSize(file.size)}
                   {duration !== null && ` • Duration: ${formatDuration(duration)}`}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Button
                 type="button"
                 variant="secondary"
@@ -181,14 +182,15 @@ export const Dropzone: React.FC<DropzoneProps> = ({
                 onClick={() => inputRef.current?.click()}
                 className="text-xs"
               >
-                Change File
+                Change
               </Button>
               <Button
                 type="button"
-                variant="tertiary"
+                variant="ghost"
                 size="sm"
                 onClick={handleRemove}
                 aria-label="Remove media file"
+                className="p-1.5"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -196,12 +198,12 @@ export const Dropzone: React.FC<DropzoneProps> = ({
           </div>
 
           {mediaUrl && (
-            <div className="pt-3 border-t border-[--border]">
-              <p className="text-[11px] text-[--text-muted] font-medium mb-1.5">
+            <div className="pt-3 border-t border-border">
+              <p className="text-xs text-text-muted font-medium mb-2">
                 Playback preview of your uploaded file:
               </p>
               {isVideo ? (
-                <video src={mediaUrl} controls className="w-full max-h-56 rounded-[6px] bg-black" />
+                <video src={mediaUrl} controls className="w-full max-h-56 rounded-xl bg-black" />
               ) : (
                 <audio src={mediaUrl} controls className="w-full h-9" />
               )}
@@ -211,7 +213,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
       )}
 
       {error && (
-        <p className="flex items-center gap-1.5 text-xs text-[--danger]">
+        <p className="flex items-center gap-1.5 text-xs text-danger font-medium">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           <span>{error}</span>
         </p>

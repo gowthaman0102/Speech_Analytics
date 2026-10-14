@@ -4,7 +4,7 @@ import { Play, Pause, RotateCcw, Volume2, VolumeX, Lock, Unlock } from 'lucide-r
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
-import type { FlawSegment } from '../types';
+import type { FlawSegment, PlaybackRequest } from '../types';
 
 interface WaveformComparisonProps {
   referenceAudioUrl?: string | null;
@@ -13,6 +13,9 @@ interface WaveformComparisonProps {
   selectedFlawId?: string;
   onSelectFlaw?: (flawId: string) => void;
   seekTime?: number | null;
+  playbackRequest?: PlaybackRequest | null;
+  onTimeUpdate?: (currentTime: number) => void;
+  onPlayStateChange?: (isPlaying: boolean) => void;
 }
 
 export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
@@ -22,12 +25,17 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
   selectedFlawId,
   onSelectFlaw,
   seekTime,
+  playbackRequest,
+  onTimeUpdate,
+  onPlayStateChange,
 }) => {
   const refContainerRef = useRef<HTMLDivElement>(null);
   const partContainerRef = useRef<HTMLDivElement>(null);
 
   const refWaveSurfer = useRef<WaveSurfer | null>(null);
   const partWaveSurfer = useRef<WaveSurfer | null>(null);
+  const pendingRequestRef = useRef<PlaybackRequest | null>(null);
+  const snippetEndRef = useRef<number | null>(null);
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [activeTrack, setActiveTrack] = useState<'participant' | 'reference' | 'both'>('participant');
@@ -82,35 +90,108 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
     partWaveSurfer.current = wsPart;
 
     wsPart.on('ready', () => {
-      setDuration(wsPart.getDuration());
+      const dur = wsPart.getDuration();
+      setDuration(dur);
+
+      if (pendingRequestRef.current) {
+        const req = pendingRequestRef.current;
+        pendingRequestRef.current = null;
+        try {
+          snippetEndRef.current = req.end !== undefined && req.end > req.start ? req.end : null;
+          wsPart.setTime(req.start);
+          if (req.playImmediately) {
+            wsPart.play().catch(() => {});
+          }
+        } catch (e) {
+          console.warn('Pending seek error:', e);
+        }
+      }
     });
 
     wsPart.on('timeupdate', (t) => {
       setCurrentTime(t);
+      onTimeUpdate?.(t);
+
+      // Check if snippet boundary reached
+      if (snippetEndRef.current !== null && t >= snippetEndRef.current) {
+        snippetEndRef.current = null;
+        wsPart.pause();
+      }
     });
 
-    wsPart.on('play', () => setIsPlaying(true));
-    wsPart.on('pause', () => setIsPlaying(false));
-    wsPart.on('finish', () => setIsPlaying(false));
+    wsPart.on('play', () => {
+      setIsPlaying(true);
+      onPlayStateChange?.(true);
+    });
+
+    wsPart.on('pause', () => {
+      setIsPlaying(false);
+      onPlayStateChange?.(false);
+    });
+
+    wsPart.on('finish', () => {
+      setIsPlaying(false);
+      onPlayStateChange?.(false);
+      snippetEndRef.current = null;
+    });
 
     return () => {
       wsPart.destroy();
     };
   }, [participantAudioUrl]);
 
-  // Synchronized seek handling
+  // Handle PlaybackRequest from parent (e.g. sentence play button or timeline seek)
   useEffect(() => {
-    if (seekTime !== null && seekTime !== undefined && duration > 0) {
-      const targetProgress = Math.max(0, Math.min(1, seekTime / duration));
-      if (partWaveSurfer.current) {
-        partWaveSurfer.current.seekTo(targetProgress);
-        partWaveSurfer.current.play();
+    if (!playbackRequest) return;
+    const { start, end, playImmediately } = playbackRequest;
+
+    const wsPart = partWaveSurfer.current;
+    if (!wsPart) {
+      pendingRequestRef.current = playbackRequest;
+      return;
+    }
+
+    if (!playImmediately) {
+      snippetEndRef.current = null;
+      wsPart.pause();
+      if (refWaveSurfer.current) refWaveSurfer.current.pause();
+      return;
+    }
+
+    snippetEndRef.current = end !== undefined && end > start ? end : null;
+
+    try {
+      wsPart.setTime(start);
+      if (refWaveSurfer.current) {
+        refWaveSurfer.current.setTime(start);
+      }
+      wsPart.play().catch((err) => console.warn('Playback error:', err));
+      if (activeTrack === 'both' && refWaveSurfer.current) {
+        refWaveSurfer.current.play().catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Seek error:', e);
+    }
+  }, [playbackRequest, activeTrack]);
+
+  // Legacy fallback seek handling if seekTime passed directly
+  useEffect(() => {
+    if (seekTime !== null && seekTime !== undefined && !playbackRequest) {
+      snippetEndRef.current = null;
+      const wsPart = partWaveSurfer.current;
+      if (wsPart) {
+        try {
+          wsPart.setTime(seekTime);
+          wsPart.play().catch(() => {});
+        } catch (e) {}
       }
       if (refWaveSurfer.current) {
-        refWaveSurfer.current.seekTo(targetProgress);
+        try {
+          refWaveSurfer.current.setTime(seekTime);
+        } catch (e) {}
       }
     }
-  }, [seekTime, duration]);
+  }, [seekTime]);
 
   // Spacebar shortcut for Play/Pause
   useEffect(() => {
@@ -129,6 +210,7 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
   });
 
   const togglePlay = () => {
+    snippetEndRef.current = null; // Clear snippet bounds when user presses main play/pause
     const partWs = partWaveSurfer.current;
     const refWs = refWaveSurfer.current;
 
@@ -140,26 +222,27 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
     } else {
       if (activeTrack === 'participant' || !refWs) {
         if (refWs) refWs.pause();
-        partWs.play();
+        partWs.play().catch(() => {});
       } else if (activeTrack === 'reference') {
         partWs.pause();
-        refWs.play();
+        refWs.play().catch(() => {});
       } else {
         const time = partWs.getCurrentTime();
         refWs.setTime(time);
-        refWs.play();
-        partWs.play();
+        refWs.play().catch(() => {});
+        partWs.play().catch(() => {});
       }
     }
   };
 
   const handleRestart = () => {
+    snippetEndRef.current = null;
     if (partWaveSurfer.current) {
-      partWaveSurfer.current.seekTo(0);
-      partWaveSurfer.current.play();
+      partWaveSurfer.current.setTime(0);
+      partWaveSurfer.current.play().catch(() => {});
     }
     if (refWaveSurfer.current) {
-      refWaveSurfer.current.seekTo(0);
+      refWaveSurfer.current.setTime(0);
     }
   };
 

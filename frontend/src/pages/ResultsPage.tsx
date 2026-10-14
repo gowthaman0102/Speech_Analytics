@@ -13,7 +13,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { evaluationApi } from '../api/evaluationApi';
-import type { EvaluationDetail, FeatureTimeSeries, FlawSegment } from '../types';
+import type { EvaluationDetail, FeatureTimeSeries, FlawSegment, PlaybackRequest } from '../types';
 import { WaveformComparison } from '../components/WaveformComparison';
 import { FeatureChart } from '../components/FeatureChart';
 import { FlawTimeline } from '../components/FlawTimeline';
@@ -36,7 +36,11 @@ export const ResultsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedFlaw, setSelectedFlaw] = useState<FlawSegment | null>(null);
-  const [seekTimestamp, setSeekTimestamp] = useState<number | null>(null);
+
+  // Synchronized playback state shared across all components
+  const [playbackRequest, setPlaybackRequest] = useState<PlaybackRequest | null>(null);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   useEffect(() => {
     if (!id) return;
@@ -64,10 +68,36 @@ export const ResultsPage: React.FC = () => {
     loadData();
   }, [id]);
 
+  const handlePlaySentence = useCallback((start: number, end?: number) => {
+    setPlaybackRequest({
+      start,
+      end,
+      playImmediately: true,
+      requestId: Date.now(),
+    });
+  }, []);
+
+  const handlePause = useCallback(() => {
+    setPlaybackRequest({
+      start: currentTime,
+      playImmediately: false,
+      requestId: Date.now(),
+    });
+  }, [currentTime]);
+
+  const handleSeek = useCallback((time: number, end?: number) => {
+    setPlaybackRequest({
+      start: time,
+      end,
+      playImmediately: true,
+      requestId: Date.now(),
+    });
+  }, []);
+
   const handleSelectFlaw = useCallback((flaw: FlawSegment) => {
     setSelectedFlaw(flaw);
-    setSeekTimestamp(flaw.start);
-  }, []);
+    handleSeek(flaw.start, flaw.end);
+  }, [handleSeek]);
 
   const handleSelectFlawById = useCallback((flawId: string) => {
     if (!evaluation) return;
@@ -327,7 +357,9 @@ export const ResultsPage: React.FC = () => {
           flaws={evaluation.flaws}
           selectedFlawId={selectedFlaw?.id}
           onSelectFlaw={handleSelectFlawById}
-          seekTime={seekTimestamp}
+          playbackRequest={playbackRequest}
+          onTimeUpdate={(t) => setCurrentTime(t)}
+          onPlayStateChange={(p) => setIsPlaying(p)}
         />
       </section>
 
@@ -336,8 +368,11 @@ export const ResultsPage: React.FC = () => {
         <section aria-label="Sentence analysis">
           <SentenceAnalysisView
             sentences={evaluation.sentences}
-            onSeekTime={(t) => setSeekTimestamp(t)}
-            activeTime={seekTimestamp}
+            onPlaySentence={handlePlaySentence}
+            onPause={handlePause}
+            onSeekTime={handleSeek}
+            currentTime={currentTime}
+            isPlaying={isPlaying}
           />
         </section>
       )}
@@ -366,7 +401,7 @@ export const ResultsPage: React.FC = () => {
             {selectedFlaw ? (
               <FlawCard
                 flaw={selectedFlaw}
-                onPlayTimestamp={(t) => setSeekTimestamp(t)}
+                onPlayTimestamp={(t) => handleSeek(t, selectedFlaw.end)}
                 isFocused={true}
               />
             ) : (
@@ -403,7 +438,7 @@ export const ResultsPage: React.FC = () => {
             flaws={evaluation.flaws}
             alignmentWords={evaluation.alignmentWords}
             onSelectFlaw={handleSelectFlaw}
-            onSeekTime={(t) => setSeekTimestamp(t)}
+            onSeekTime={(t) => handleSeek(t)}
             selectedFlawId={selectedFlaw?.id}
           />
         </section>

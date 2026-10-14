@@ -254,3 +254,10 @@ export interface BenchmarkResponse {
   averageIoU: number;
   results: BenchmarkVariantResult[];
 }
+
+export interface PlaybackRequest {
+  start: number;
+  end?: number;
+  playImmediately: boolean;
+  requestId: number;
+}

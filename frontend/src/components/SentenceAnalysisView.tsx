@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { Play, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Play, Pause, CheckCircle2, AlertTriangle, Volume2 } from 'lucide-react';
 import { Card } from './ui/Card';
-import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import type { SentenceAnalysisItem } from '../types';
 
 interface SentenceAnalysisViewProps {
   sentences: SentenceAnalysisItem[];
-  onSeekTime: (timestamp: number) => void;
+  onPlaySentence?: (start: number, end?: number, sentenceIdx?: number) => void;
+  onPause?: () => void;
+  onSeekTime?: (timestamp: number) => void;
+  currentTime?: number;
+  isPlaying?: boolean;
   activeTime?: number | null;
 }
 
@@ -30,7 +33,11 @@ const getIntentBadgeVariant = (intent: string): 'danger' | 'accent' | 'teal' | '
 
 export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
   sentences,
+  onPlaySentence,
+  onPause,
   onSeekTime,
+  currentTime,
+  isPlaying = false,
   activeTime,
 }) => {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -39,6 +46,10 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
     return null;
   }
 
+  const effectiveCurrentTime = currentTime !== undefined && currentTime !== null
+    ? currentTime
+    : (activeTime !== undefined && activeTime !== null ? activeTime : null);
+
   return (
     <Card className="p-6 space-y-5 text-left">
       {/* Header */}
@@ -46,18 +57,18 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-text tracking-tight">
-              Sentence-by-sentence delivery alignment
+              Sentence-Level Semantic Tone Alignment
             </h3>
             <Badge variant="teal" size="sm">
-              {sentences.length} sentences
+              {sentences.length} Sentences
             </Badge>
           </div>
           <p className="text-xs text-text-muted mt-1">
-            Expected delivery for each thought group compared against actual vocal performance.
+            Automatic intent inference paired with recommended prosodic ranges vs observed delivery.
           </p>
         </div>
         <span className="text-xs text-text-muted">
-          Click any sentence to seek audio playback
+          Click any sentence or play icon to listen to that phrase
         </span>
       </div>
 
@@ -65,11 +76,12 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
       <div className="space-y-3">
         {sentences.map((item, idx) => {
           const isSelected = selectedIdx === idx;
-          const isCurrentInPlayback =
-            activeTime !== undefined &&
-            activeTime !== null &&
-            activeTime >= item.start_time &&
-            activeTime <= item.end_time;
+          const isSentenceTimeMatched =
+            effectiveCurrentTime !== null &&
+            effectiveCurrentTime >= (item.start_time - 0.05) &&
+            effectiveCurrentTime <= (item.end_time + 0.05);
+
+          const isThisPlaying = isSentenceTimeMatched && isPlaying;
 
           const badgeVariant = getIntentBadgeVariant(item.primary_intent);
           const score = Math.round(item.compatibility_score);
@@ -78,24 +90,49 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
           const exp = item.expected_delivery;
           const act = item.actual_prosody;
 
+          const handlePlayClick = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            setSelectedIdx(idx);
+
+            if (isThisPlaying) {
+              if (onPause) {
+                onPause();
+              }
+            } else {
+              if (onPlaySentence) {
+                onPlaySentence(item.start_time, item.end_time, idx);
+              } else if (onSeekTime) {
+                onSeekTime(item.start_time);
+              }
+            }
+          };
+
+          const handleCardClick = () => {
+            setSelectedIdx(idx);
+            if (onPlaySentence) {
+              onPlaySentence(item.start_time, item.end_time, idx);
+            } else if (onSeekTime) {
+              onSeekTime(item.start_time);
+            }
+          };
+
           return (
             <div
               key={item.sentence_index || idx}
-              onClick={() => {
-                setSelectedIdx(idx);
-                onSeekTime(item.start_time);
-              }}
+              onClick={handleCardClick}
               className={`p-5 rounded-xl border transition-all cursor-pointer text-left ${
-                isSelected || isCurrentInPlayback
+                isThisPlaying
                   ? 'bg-surface-2 border-accent shadow-xs ring-2 ring-accent/30'
-                  : 'bg-surface border-border hover:border-border-strong'
+                  : isSelected
+                  ? 'bg-surface-2 border-accent shadow-xs'
+                  : 'bg-surface border-border hover:border-border-strong hover:bg-surface-2/40'
               }`}
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 {/* Left: Timing & Intent Badges */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-surface-2 text-text border border-border tabular-nums">
-                    Sentence {item.sentence_index ?? idx + 1} • {(item.start_time ?? 0).toFixed(1)}s – {(item.end_time ?? 0).toFixed(1)}s
+                    #{item.sentence_index ?? idx + 1} • {(item.start_time ?? 0).toFixed(1)}s – {(item.end_time ?? 0).toFixed(1)}s
                   </span>
                   <Badge variant={badgeVariant} size="sm">
                     {item.primary_intent.replace(/_/g, ' ')}
@@ -103,9 +140,15 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                   <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-surface text-text-muted border border-border">
                     Role: {item.role}
                   </span>
+                  {isThisPlaying && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-accent text-white text-xs font-bold shadow-2xs">
+                      <Volume2 className="w-3.5 h-3.5 animate-pulse" />
+                      <span>Playing</span>
+                    </span>
+                  )}
                 </div>
 
-                {/* Right: Compatibility Score Badge */}
+                {/* Right: Compatibility Score Badge & Dedicated Play/Pause Button */}
                 <div className="flex items-center gap-2 self-start md:self-auto">
                   <Badge variant={scoreBadgeVariant} size="sm">
                     {score >= 70 ? (
@@ -113,21 +156,26 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                     ) : (
                       <AlertTriangle className="w-3.5 h-3.5 mr-1 inline" />
                     )}
-                    <span>{score}% match</span>
+                    <span>{score}% Compatibility</span>
                   </Badge>
-                  <Button
+
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="p-1 h-7 w-7 text-text-muted hover:text-accent"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSeekTime(item.start_time ?? 0);
-                    }}
-                    title="Play sentence audio"
+                    onClick={handlePlayClick}
+                    className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                      isThisPlaying
+                        ? 'bg-accent text-white border-accent shadow-xs scale-105 ring-2 ring-accent/30'
+                        : 'bg-surface text-text hover:text-accent hover:border-accent border-border shadow-2xs hover:bg-surface-2'
+                    }`}
+                    title={isThisPlaying ? 'Pause phrase playback' : 'Play phrase snippet'}
+                    aria-label={isThisPlaying ? `Pause sentence ${idx + 1}` : `Play sentence ${idx + 1}`}
                   >
-                    <Play className="w-3.5 h-3.5" />
-                  </Button>
+                    {isThisPlaying ? (
+                      <Pause className="w-4 h-4 fill-current" />
+                    ) : (
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -142,7 +190,7 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
               <div className="mt-3.5 pt-3.5 border-t border-border grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                 {/* Cadence / WPM */}
                 <div className="p-2.5 rounded-xl bg-surface-2 border border-border">
-                  <span className="text-xs text-text-muted block">Speaking rate</span>
+                  <span className="text-xs text-text-muted block">Speaking Rate</span>
                   <div className="mt-1 flex items-baseline justify-between">
                     <span className="font-bold text-text tabular-nums">
                       {act?.speech_rate_wpm ? `${act.speech_rate_wpm} WPM` : '—'}
@@ -155,7 +203,7 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
 
                 {/* Pitch Modulation */}
                 <div className="p-2.5 rounded-xl bg-surface-2 border border-border">
-                  <span className="text-xs text-text-muted block">Pitch modulation</span>
+                  <span className="text-xs text-text-muted block">Pitch Modulation</span>
                   <div className="mt-1 flex items-baseline justify-between">
                     <span className="font-bold text-text tabular-nums">
                       {typeof act?.pitch_variation === 'number' ? act.pitch_variation.toFixed(3) : '—'}
@@ -168,7 +216,7 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
 
                 {/* Energy Projection */}
                 <div className="p-2.5 rounded-xl bg-surface-2 border border-border">
-                  <span className="text-xs text-text-muted block">Vocal energy</span>
+                  <span className="text-xs text-text-muted block">Vocal Energy</span>
                   <div className="mt-1 flex items-baseline justify-between">
                     <span className="font-bold text-text tabular-nums">
                       {typeof act?.normalized_energy === 'number' ? act.normalized_energy.toFixed(2) : '—'}
@@ -181,10 +229,10 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
 
                 {/* Expected Tone Intonation */}
                 <div className="p-2.5 rounded-xl bg-surface-2 border border-border">
-                  <span className="text-xs text-text-muted block">Intonation</span>
+                  <span className="text-xs text-text-muted block">Intonation Contour</span>
                   <div className="mt-1 flex items-baseline justify-between">
                     <span className="font-bold text-text">
-                      {exp?.intonation || 'Modulated'}
+                      {exp?.intonation || 'UPLIFTING'}
                     </span>
                     {typeof act?.final_pitch_delta_hz === 'number' && (
                       <span className="text-xs text-text-muted tabular-nums">

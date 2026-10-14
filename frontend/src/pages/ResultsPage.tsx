@@ -452,8 +452,11 @@ export const ResultsPage: React.FC = () => {
             transcript={evaluation.transcript}
             flaws={evaluation.flaws}
             alignmentWords={evaluation.alignmentWords}
+            sentences={evaluation.sentences}
             onSelectFlaw={handleSelectFlaw}
             onSeekTime={(t) => handleSeek(t)}
+            currentTime={currentTime}
+            isPlaying={isPlaying}
             selectedFlawId={selectedFlaw?.id}
           />
         </section>

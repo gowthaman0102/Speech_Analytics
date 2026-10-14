@@ -1,41 +1,56 @@
 import React from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, Volume2 } from 'lucide-react';
 import { Card } from './ui/Card';
-import type { FlawSegment } from '../types';
+import { Badge } from './ui/Badge';
+import type { FlawSegment, SentenceAnalysisItem } from '../types';
 
 interface TranscriptViewerProps {
   transcript: string;
-  flaws: FlawSegment[];
+  flaws?: FlawSegment[];
   alignmentWords?: Array<any>;
+  sentences?: SentenceAnalysisItem[];
   onSelectFlaw?: (flaw: FlawSegment) => void;
   onSeekTime?: (time: number) => void;
   selectedFlawId?: string;
+  currentTime?: number;
+  isPlaying?: boolean;
 }
 
 export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
   transcript,
-  flaws,
   alignmentWords,
-  onSelectFlaw,
+  sentences,
   onSeekTime,
-  selectedFlawId,
+  currentTime,
+  isPlaying = false,
 }) => {
-  const sentences = transcript.split('\n').filter((s) => s.trim().length > 0);
-
-  const handleWordClick = (wordObj: any) => {
-    const start = wordObj.part_start ?? wordObj.start ?? 0;
-    const end = wordObj.part_end ?? wordObj.end ?? 0;
-    onSeekTime?.(start);
-    const matchedFlaw = flaws.find(
-      (f) => start <= f.end && end >= f.start
-    );
-    if (matchedFlaw) {
-      onSelectFlaw?.(matchedFlaw);
-    }
+  const formatTimestamp = (secs: number = 0) => {
+    const s = Math.max(0, Number(secs) || 0);
+    const mins = Math.floor(s / 60);
+    const remSecs = Math.floor(s % 60);
+    const ms = Math.floor((s % 1) * 10);
+    return `${mins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}.${ms}`;
   };
+
+  const effectiveCurrentTime = currentTime ?? -1;
+
+  const handleWordClick = (w: any) => {
+    const start = w.part_start ?? w.start ?? 0;
+    onSeekTime?.(start);
+  };
+
+  const isWordActive = (start: number, end: number) => {
+    if (!isPlaying || effectiveCurrentTime < 0) return false;
+    return effectiveCurrentTime >= (start - 0.05) && effectiveCurrentTime <= Math.max(end + 0.05, start + 0.25);
+  };
+
+  const wordCount = alignmentWords && alignmentWords.length > 0
+    ? alignmentWords.length
+    : transcript.trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <Card className="p-6 text-left">
+      {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
@@ -45,53 +60,127 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
             </h3>
           </div>
           <p className="text-xs text-text-muted mt-1">
-            Click any word or sentence to jump to that moment in the recording.
+            Click any word or timestamp to jump audio. Words follow live along with your voice.
           </p>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-4 text-xs text-text-muted">
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 bg-danger inline-block rounded-full" />
-            <span>High flag</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-4 h-0.5 bg-flaw-medium inline-block rounded-full" />
-            <span>Medium flag</span>
-          </div>
+        {/* Live sync & word count badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="teal" size="sm">
+            {wordCount} Words
+          </Badge>
+          {isPlaying && (
+            <Badge variant="accent" size="sm">
+              <Volume2 className="w-3 h-3 mr-1 animate-pulse" />
+              <span>Live synced</span>
+            </Badge>
+          )}
         </div>
       </div>
 
-      {alignmentWords && alignmentWords.length > 0 ? (
-        <div className="p-6 bg-surface-2 rounded-xl border border-border flex flex-wrap gap-x-1.5 gap-y-2 text-[17px] text-text leading-[1.8]">
+      {/* Case 1: Structured Sentences with Aligned Words */}
+      {sentences && sentences.length > 0 && alignmentWords && alignmentWords.length > 0 ? (
+        <div className="space-y-3">
+          {sentences.map((sent, sIdx) => {
+            const sStart = sent.start_time ?? 0;
+            const sEnd = sent.end_time ?? (sStart + (sent.duration || 3.0));
+            const isSentenceActive =
+              isPlaying &&
+              effectiveCurrentTime >= (sStart - 0.05) &&
+              effectiveCurrentTime <= (sEnd + 0.05);
+
+            // Words belonging to this sentence boundary
+            const wordsInSentence = alignmentWords.filter((w) => {
+              const wst = w.part_start ?? w.start ?? 0;
+              return wst >= (sStart - 0.15) && wst < (sEnd + 0.15);
+            });
+
+            return (
+              <div
+                key={sent.sentence_index || sIdx}
+                className={`p-4 rounded-xl border transition-all ${
+                  isSentenceActive
+                    ? 'bg-accent-soft/40 border-accent shadow-xs'
+                    : 'bg-surface-2/50 border-border hover:bg-surface-2 hover:border-border-strong'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Clickable Timestamp Chip */}
+                  <button
+                    type="button"
+                    onClick={() => onSeekTime?.(sStart)}
+                    className={`px-2.5 py-1 rounded-lg border text-xs font-bold tabular-nums shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                      isSentenceActive
+                        ? 'bg-accent text-white border-accent shadow-2xs'
+                        : 'bg-surface text-text-muted hover:text-accent hover:border-accent border-border shadow-2xs'
+                    }`}
+                    title={`Jump audio to ${formatTimestamp(sStart)}`}
+                  >
+                    {formatTimestamp(sStart)}
+                  </button>
+
+                  {/* Words with Live Highlight */}
+                  <div className="flex-1 text-base text-text leading-relaxed flex flex-wrap gap-x-1.5 gap-y-1">
+                    {wordsInSentence.length > 0 ? (
+                      wordsInSentence.map((w: any, wIdx: number) => {
+                        const wordText = w.word ?? w.text ?? '';
+                        const start = w.part_start ?? w.start ?? 0;
+                        const end = w.part_end ?? w.end ?? 0;
+                        const active = isWordActive(start, end);
+
+                        return (
+                          <span
+                            key={wIdx}
+                            onClick={() => handleWordClick(w)}
+                            className={`px-1 py-0.5 rounded-md cursor-pointer transition-all ${
+                              active
+                                ? 'bg-accent text-white font-bold shadow-2xs scale-105'
+                                : 'text-text hover:bg-surface-3 hover:text-accent'
+                            }`}
+                            title={`▶ ${wordText} (${start.toFixed(1)}s – ${end.toFixed(1)}s)`}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleWordClick(w);
+                            }}
+                          >
+                            {wordText}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span
+                        onClick={() => onSeekTime?.(sStart)}
+                        className="cursor-pointer hover:text-accent font-medium"
+                      >
+                        {sent.text}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : alignmentWords && alignmentWords.length > 0 ? (
+        /* Case 2: Continuous Interactive Flow */
+        <div className="p-6 bg-surface-2 rounded-xl border border-border flex flex-wrap gap-x-1.5 gap-y-2 text-[17px] text-text leading-[1.9]">
           {alignmentWords.map((w: any, idx: number) => {
             const wordText = w.word ?? w.text ?? '';
             const start = w.part_start ?? w.start ?? 0;
             const end = w.part_end ?? w.end ?? 0;
-            const overlappingFlaw = flaws.find(
-              (f) => start <= f.end && end >= f.start
-            );
-            const isSelected = overlappingFlaw && selectedFlawId === overlappingFlaw.id;
-
-            let underlineClass = 'hover:text-accent';
-            if (isSelected) {
-              underlineClass = 'border-b-2 border-accent bg-accent-soft text-accent-text font-bold rounded-xs';
-            } else if (overlappingFlaw?.severity === 'HIGH') {
-              underlineClass = 'border-b-2 border-danger hover:bg-danger-soft';
-            } else if (overlappingFlaw?.severity === 'MEDIUM') {
-              underlineClass = 'border-b-2 border-flaw-medium hover:bg-warning-soft';
-            } else if (overlappingFlaw) {
-              underlineClass = 'border-b-2 border-flaw-low hover:bg-warning-soft';
-            }
+            const active = isWordActive(start, end);
 
             return (
               <span
                 key={idx}
                 onClick={() => handleWordClick(w)}
-                className={`px-0.5 pb-0.5 cursor-pointer transition-colors ${underlineClass}`}
-                title={`${wordText} (${start.toFixed(2)}s – ${end.toFixed(2)}s)${
-                  overlappingFlaw ? ` • ${overlappingFlaw.type.replace(/_/g, ' ')}` : ''
+                className={`px-1.5 py-0.5 rounded-md cursor-pointer transition-all ${
+                  active
+                    ? 'bg-accent text-white font-bold shadow-2xs scale-105'
+                    : 'text-text hover:bg-surface-3 hover:text-accent'
                 }`}
+                title={`▶ ${wordText} (${start.toFixed(1)}s – ${end.toFixed(1)}s)`}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -104,53 +193,13 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
           })}
         </div>
       ) : (
+        /* Case 3: Fallback Plain Text */
         <div className="p-6 bg-surface-2 rounded-xl border border-border space-y-4 text-[17px] text-text leading-[1.8]">
-          {sentences.map((sentence, sIdx) => {
-            const matchingFlaws = flaws.filter(
-              (f) =>
-                f.transcript &&
-                (sentence.toLowerCase().includes(f.transcript.toLowerCase()) ||
-                  f.transcript.toLowerCase().includes(sentence.toLowerCase()))
-            );
-
-            if (matchingFlaws.length > 0) {
-              const flaw = matchingFlaws[0];
-              const isSelected = selectedFlawId === flaw.id;
-
-              return (
-                <p
-                  key={sIdx}
-                  onClick={() => {
-                    onSelectFlaw?.(flaw);
-                    onSeekTime?.(flaw.start);
-                  }}
-                  className={`p-3 rounded-xl cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'bg-accent-soft border-l-4 border-l-accent font-bold text-accent-text'
-                      : flaw.severity === 'HIGH'
-                      ? 'border-l-4 border-l-danger bg-surface hover:bg-danger-soft'
-                      : 'border-l-4 border-l-flaw-medium bg-surface hover:bg-warning-soft'
-                  }`}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      onSelectFlaw?.(flaw);
-                      onSeekTime?.(flaw.start);
-                    }
-                  }}
-                >
-                  {sentence}
-                </p>
-              );
-            }
-
-            return (
-              <p key={sIdx} className="text-text opacity-95">
-                {sentence}
-              </p>
-            );
-          })}
+          {transcript.split('\n').filter((s) => s.trim().length > 0).map((sentence, sIdx) => (
+            <p key={sIdx} className="text-text font-medium">
+              {sentence}
+            </p>
+          ))}
         </div>
       )}
     </Card>

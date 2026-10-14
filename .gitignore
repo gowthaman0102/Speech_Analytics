@@ -8,6 +8,8 @@ backend/venv/
 venv/
 *.db
 backend/*.db
+.env
+backend/.env
 
 # Node / Frontend
 frontend/node_modules/
@@ -21,6 +23,8 @@ backend/uploads/*
 backend/processed/*
 !backend/processed/.gitkeep
 backend/dataset/temp/*
+processed/
+uploads/
 
 # OS
 .DS_Store

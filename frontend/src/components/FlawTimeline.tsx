@@ -1,6 +1,7 @@
-import React from 'react';
-import { Clock, AlertCircle, ChevronRight, Play } from 'lucide-react';
-import { FlawSegment } from '../types';
+import React, { useState } from 'react';
+import { Clock, Filter, AlertCircle } from 'lucide-react';
+import { Card } from './ui/Card';
+import type { FlawSegment } from '../types';
 
 interface FlawTimelineProps {
   flaws: FlawSegment[];
@@ -13,6 +14,8 @@ export const FlawTimeline: React.FC<FlawTimelineProps> = ({
   selectedFlawId,
   onSelectFlaw,
 }) => {
+  const [filterSeverity, setFilterSeverity] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
+
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const remSecs = Math.floor(secs % 60);
@@ -20,95 +23,133 @@ export const FlawTimeline: React.FC<FlawTimelineProps> = ({
     return `${mins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}.${ms}`;
   };
 
-  const getSeverityBadge = (severity: string) => {
+  const formatFlawTitle = (flaw: FlawSegment) => {
+    const raw = flaw.type.replace(/_/g, ' ').toLowerCase();
+    const capitalized = raw.charAt(0).toUpperCase() + raw.slice(1);
+    const delta = flaw.explanation?.metrics?.[0]?.delta_pct;
+    if (delta !== undefined && Math.abs(delta) > 0) {
+      const sign = delta > 0 ? '+' : '';
+      return `${capitalized} (${sign}${Math.round(delta)}%)`;
+    }
+    return capitalized;
+  };
+
+  const getSeverityDot = (severity: string) => {
     switch (severity) {
       case 'HIGH':
-        return 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+        return 'bg-rose-500';
       case 'MEDIUM':
-        return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+        return 'bg-amber-500';
       default:
-        return 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30';
+        return 'bg-amber-400';
     }
   };
 
+  const counts = {
+    ALL: flaws.length,
+    HIGH: flaws.filter((f) => f.severity === 'HIGH').length,
+    MEDIUM: flaws.filter((f) => f.severity === 'MEDIUM').length,
+    LOW: flaws.filter((f) => f.severity === 'LOW').length,
+  };
+
+  const filteredFlaws = flaws
+    .filter((f) => filterSeverity === 'ALL' || f.severity === filterSeverity)
+    .sort((a, b) => a.start - b.start);
+
   return (
-    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl backdrop-blur-sm">
-      <div className="flex items-center justify-between mb-4">
+    <Card className="p-5 flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
         <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-indigo-400" />
-          <h3 className="text-lg font-bold text-white tracking-tight">Temporal Flaw Timeline</h3>
+          <Clock className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
+          <h3 className="text-sm font-semibold text-[var(--foreground)] tracking-tight">
+            Temporal Flaw Index
+          </h3>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-          {flaws.length} Events
+        <span className="text-xs font-mono text-[var(--muted-foreground)]">
+          {flaws.length} detected
         </span>
       </div>
-      <p className="text-xs text-slate-400 mb-5">
-        Click any event to automatically seek audio and inspect causal diagnostics
-      </p>
 
-      {flaws.length === 0 ? (
-        <div className="text-center py-10 bg-slate-950/50 rounded-xl border border-slate-800/80">
-          <AlertCircle className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-slate-200">No Significant Delivery Flaws Detected</p>
-          <p className="text-xs text-slate-400 mt-1">
-            The performance matched the reference baseline with exceptional fidelity.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
-          {flaws.map((flaw) => {
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-1 mb-3 text-xs">
+        <Filter className="w-3 h-3 text-[var(--muted-foreground)] mr-1 shrink-0" aria-hidden="true" />
+        {(['ALL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((sev) => (
+          <button
+            key={sev}
+            type="button"
+            onClick={() => setFilterSeverity(sev)}
+            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+              filterSeverity === sev
+                ? 'bg-[var(--accent)] text-white'
+                : 'bg-[var(--surface-2)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--border)]'
+            }`}
+          >
+            {sev === 'ALL' ? 'All' : sev.charAt(0) + sev.slice(1).toLowerCase()} ({counts[sev]})
+          </button>
+        ))}
+      </div>
+
+      {/* Flaw List */}
+      <div className="flex-1 overflow-y-auto space-y-2 max-h-[460px] pr-1">
+        {filteredFlaws.length === 0 ? (
+          <div className="text-center py-10 px-4 text-xs text-[var(--muted-foreground)] bg-[var(--surface-2)] rounded border border-[var(--border)]">
+            <AlertCircle className="w-5 h-5 mx-auto mb-1 text-emerald-600 opacity-80" />
+            <p className="font-medium text-[var(--foreground)]">No flaws matching filter</p>
+            <p className="mt-0.5">Delivery adhered closely to the baseline criteria.</p>
+          </div>
+        ) : (
+          filteredFlaws.map((flaw) => {
             const isSelected = selectedFlawId === flaw.id;
 
             return (
               <div
                 key={flaw.id}
                 onClick={() => onSelectFlaw(flaw)}
-                className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                className={`p-3 rounded-md border text-left cursor-pointer transition-all ${
                   isSelected
-                    ? 'bg-slate-800/90 border-indigo-500/80 shadow-md shadow-indigo-500/10 translate-x-1'
-                    : 'bg-slate-950/70 border-slate-800/80 hover:bg-slate-800/50 hover:border-slate-700'
+                    ? 'bg-[var(--surface-2)] border-[var(--accent)] shadow-xs ring-1 ring-[var(--accent)]'
+                    : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-strong)]'
                 }`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelectFlaw(flaw);
+                  }
+                }}
+                aria-pressed={isSelected}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 font-mono text-xs">
-                    <span className="text-cyan-400 font-bold">{formatTime(flaw.start)}</span>
-                    <span className="text-slate-600">—</span>
-                    <span className="text-cyan-400 font-bold">{formatTime(flaw.end)}</span>
-                    <span className="text-[10px] text-slate-500">({flaw.duration.toFixed(1)}s)</span>
-                  </div>
-
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${getSeverityBadge(flaw.severity)}`}>
-                    {flaw.severity}
+                  <span className="font-mono text-xs font-semibold text-[var(--foreground)]">
+                    {formatTime(flaw.start)} – {formatTime(flaw.end)}
                   </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`w-2 h-2 rounded-full ${getSeverityDot(flaw.severity)}`}
+                      title={`${flaw.severity} severity`}
+                    />
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--muted-foreground)]">
+                      {flaw.severity}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <div>
-                    <h5 className="font-bold text-sm text-slate-100 flex items-center gap-1.5">
-                      {flaw.type.replace(/_/g, ' ')}
-                    </h5>
-                    {flaw.transcript && (
-                      <p className="text-xs text-slate-400 mt-0.5 italic line-clamp-1">
-                        "{flaw.transcript}"
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    className={`p-1.5 rounded-lg border transition-all ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white border-indigo-500'
-                        : 'bg-slate-800 text-slate-400 border-slate-700 group-hover:text-white'
-                    }`}
-                    title="Seek audio to timestamp"
-                  >
-                    <Play className="h-3.5 w-3.5 fill-current" />
-                  </button>
+                <div className="mt-1.5 font-medium text-xs text-[var(--foreground)]">
+                  {formatFlawTitle(flaw)}
                 </div>
+
+                {flaw.transcript && (
+                  <p className="text-[11px] text-[var(--muted-foreground)] mt-1 line-clamp-1 italic font-serif">
+                    "{flaw.transcript}"
+                  </p>
+                )}
               </div>
             );
-          })}
-        </div>
-      )}
-    </div>
+          })
+        )}
+      </div>
+    </Card>
   );
 };

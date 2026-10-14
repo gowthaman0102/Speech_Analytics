@@ -52,6 +52,32 @@ class EvaluationSummary(BaseModel):
     strongestArea: Optional[str] = "Vocal Energy"
     weakestArea: Optional[str] = "Pacing"
 
+class EvaluationStatusResponse(BaseModel):
+    id: str
+    status: str
+    progress: int
+    currentStep: str
+    overallScore: float
+    similarity: float
+    confidence: float
+    error: Optional[str] = None
+
+class EvaluationHistoryItem(BaseModel):
+    id: str
+    title: str
+    createdAt: datetime
+    status: str
+    progress: int
+    overallScore: float
+    similarity: float
+    totalFlaws: int
+    referenceDuration: float
+    participantDuration: float
+
+class EvaluationHistoryResponse(BaseModel):
+    items: List[EvaluationHistoryItem]
+    total: int
+
 class FeatureTimeSeriesResponse(BaseModel):
     timePoints: List[float]
     referenceFeatures: Dict[str, List[Optional[float]]]
@@ -143,3 +169,8 @@ class BenchmarkResponse(BaseModel):
     monotonicityPassed: bool
     averageIoU: float
     results: List[BenchmarkVariantResult]
+
+class EvaluateDatasetVariantRequest(BaseModel):
+    speechId: Optional[str] = None
+    variantName: Optional[str] = None
+    variantIndex: Optional[int] = None

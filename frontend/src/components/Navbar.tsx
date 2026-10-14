@@ -1,84 +1,172 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Activity, Radio, PlusCircle, Database, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, AlertTriangle, RefreshCw } from 'lucide-react';
+import { BrandWordmark } from './BrandWordmark';
+import { Button } from './ui/Button';
 import { evaluationApi } from '../api/evaluationApi';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
-  const [online, setOnline] = useState<boolean>(true);
+  const navigate = useNavigate();
+  const [isServerOnline, setIsServerOnline] = useState<boolean>(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [startingDemo, setStartingDemo] = useState<boolean>(false);
+
+  const checkHealth = async () => {
+    try {
+      await evaluationApi.getHealth();
+      setIsServerOnline(true);
+    } catch {
+      setIsServerOnline(false);
+    }
+  };
 
   useEffect(() => {
-    evaluationApi.getHealth()
-      .then(() => setOnline(true))
-      .catch(() => setOnline(false));
+    checkHealth();
   }, []);
 
+  // Poll only when server is offline every 15s
+  useEffect(() => {
+    if (isServerOnline) return;
+    const interval = setInterval(checkHealth, 15000);
+    return () => clearInterval(interval);
+  }, [isServerOnline]);
+
   const navLinks = [
-    { to: '/', label: 'Overview', icon: Activity },
-    { to: '/evaluate', label: 'New Evaluation', icon: PlusCircle },
-    { to: '/dataset', label: 'Dataset Explorer', icon: Database },
+    { to: '/', label: 'Overview' },
+    { to: '/evaluate', label: 'New evaluation' },
+    { to: '/evaluations', label: 'My evaluations' },
+    { to: '/dataset', label: 'Dataset' },
   ];
 
+  const handleStartDemo = async () => {
+    try {
+      setStartingDemo(true);
+      const res = await evaluationApi.startDemoEvaluation();
+      navigate(`/processing/${res.evaluationId}`);
+    } catch (err) {
+      console.error('Demo evaluation error:', err);
+      navigate('/evaluate');
+    } finally {
+      setStartingDemo(false);
+    }
+  };
+
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-slate-800/80 px-6 py-3.5 transition-all">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-cyan-500 to-emerald-400 p-[2px] shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-            <div className="h-full w-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-              <Radio className="h-5 w-5 text-cyan-400 group-hover:rotate-12 transition-transform" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                SpeechScope AI
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                COACH
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 font-medium">Temporal Contrastive Speech Coach</p>
-          </div>
-        </Link>
-
-        <div className="flex items-center gap-1 sm:gap-2">
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            const isActive = location.pathname === link.to;
-            return (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-slate-800/90 text-white shadow-sm border border-slate-700/60'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                }`}
-              >
-                <Icon className={`h-4 w-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
-                <span>{link.label}</span>
-              </Link>
-            );
-          })}
-
-          <Link
-            to="/evaluate?demo=true"
-            className="flex items-center gap-2 ml-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 text-white shadow-md shadow-indigo-500/20 hover:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>Try Demo</span>
+    <>
+      <header className="h-14 bg-[--surface] border-b border-[--border] relative z-40">
+        <div className="max-w-6xl mx-auto h-full px-6 flex items-center justify-between">
+          {/* Brand mark */}
+          <Link to="/" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent] rounded-[4px]">
+            <BrandWordmark />
           </Link>
 
-          <div className="ml-3 pl-3 border-l border-slate-800 flex items-center gap-2 text-xs">
-            <span
-              className={`h-2 w-2 rounded-full ${
-                online ? 'bg-emerald-400 shadow-sm shadow-emerald-400/80 animate-pulse' : 'bg-rose-500'
-              }`}
-            />
-            <span className="text-slate-400 hidden md:inline">{online ? 'Engine Active' : 'Connecting...'}</span>
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center gap-6 h-full ml-8">
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.to;
+              return (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`h-full flex items-center text-sm font-medium transition-colors border-b-2 -mb-px px-1 select-none ${
+                    isActive
+                      ? 'border-[--accent] text-[--text]'
+                      : 'border-transparent text-[--text-muted] hover:text-[--text]'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="hidden md:flex items-center gap-3 ml-auto">
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={startingDemo}
+              onClick={handleStartDemo}
+            >
+              Open sample
+            </Button>
+          </div>
+
+          {/* Mobile menu trigger */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 rounded-[6px] text-[--text-muted] hover:text-[--text] hover:bg-[--surface-2]"
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
-      </div>
-    </nav>
+
+        {/* Mobile dropdown panel */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-[--surface] border-b border-[--border] px-6 py-4 space-y-3 animate-fadeIn">
+            <div className="flex flex-col space-y-2">
+              {navLinks.map((link) => {
+                const isActive = location.pathname === link.to;
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`py-2 text-sm font-medium rounded-[4px] px-2 ${
+                      isActive
+                        ? 'bg-[--accent-soft] text-[--accent]'
+                        : 'text-[--text-muted] hover:text-[--text] hover:bg-[--surface-2]'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
+            <div className="pt-2 border-t border-[--border]">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full"
+                loading={startingDemo}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleStartDemo();
+                }}
+              >
+                Open sample
+              </Button>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Offline Alert Banner */}
+      {!isServerOnline && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="bg-[--warning-soft] border-b border-[--border] px-6 py-2 text-xs text-[#7A5200] flex items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-2 max-w-6xl mx-auto w-full">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-[--warning]" />
+            <span>
+              Can't reach the analysis server. Check that the backend is running on port 8000.
+            </span>
+            <button
+              onClick={checkHealth}
+              className="ml-auto inline-flex items-center gap-1 font-semibold underline hover:no-underline"
+            >
+              <RefreshCw className="h-3 w-3" />
+              <span>Retry</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

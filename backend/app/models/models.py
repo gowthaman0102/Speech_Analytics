@@ -47,6 +47,8 @@ class Evaluation(Base):
     similarity = Column(Float, default=0.0)
     confidence = Column(Float, default=0.0)
     status = Column(String(20), default="QUEUED")  # "QUEUED", "PROCESSING", "COMPLETED", "FAILED"
+    progress = Column(Integer, default=0)
+    current_step = Column(String(100), default="Queued")
     error_message = Column(Text, nullable=True)
     
     strongest_area = Column(String(100), nullable=True)

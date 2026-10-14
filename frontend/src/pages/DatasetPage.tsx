@@ -1,28 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Database,
-  Play,
-  Sparkles,
-  Layers,
-  FileAudio,
-  ArrowRight,
+  BarChart2,
   Loader2,
   CheckCircle2,
-  TrendingDown,
-  BarChart2,
-  Gauge,
-  Sliders,
-  Award,
+  Layers,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import { evaluationApi } from '../api/evaluationApi';
-import { DatasetItem, DatasetVariant, BenchmarkResponse } from '../types';
+import type { DatasetItem, BenchmarkResponse } from '../types';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 
 export const DatasetPage: React.FC = () => {
   const navigate = useNavigate();
   const [dataset, setDataset] = useState<DatasetItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [runningVariantIndex, setRunningVariantIndex] = useState<number | null>(null);
+  const [runningKey, setRunningKey] = useState<string | null>(null);
   const [benchmarkLoading, setBenchmarkLoading] = useState<boolean>(false);
   const [benchmarkData, setBenchmarkData] = useState<BenchmarkResponse | null>(null);
 
@@ -39,14 +34,15 @@ export const DatasetPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleRunVariant = async (index: number) => {
-    setRunningVariantIndex(index);
+  const handleRunVariant = async (sampleId: string, variantName: string) => {
+    const key = `${sampleId}-${variantName}`;
+    setRunningKey(key);
     try {
-      const res = await evaluationApi.evaluateVariant(index);
-      navigate(`/results/${res.evaluationId}`);
+      const res = await evaluationApi.evaluateDatasetVariant(sampleId, variantName);
+      navigate(`/processing/${res.evaluationId}`);
     } catch (e) {
-      console.error(e);
-      setRunningVariantIndex(null);
+      console.error('Failed to evaluate variant:', e);
+      setRunningKey(null);
     }
   };
 
@@ -64,350 +60,320 @@ export const DatasetPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <Loader2 className="h-10 w-10 text-cyan-400 animate-spin mb-4" />
-        <h3 className="text-xl font-bold text-white tracking-tight">Loading Contrastive Dataset & Benchmarks</h3>
+      <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mb-3" />
+        <h2 className="text-base font-semibold text-[var(--foreground)]">
+          Loading Contrastive Dataset & Benchmarks
+        </h2>
+        <p className="text-xs text-[var(--muted-foreground)] mt-1">
+          Reading acoustic speech corpora and gradient variations...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 space-y-10">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs uppercase font-bold tracking-wider px-2.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              Temporal Contrastive Speech Coach
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-mono uppercase tracking-wider text-[var(--muted-foreground)]">
+              Reference Corpora & Gradient Matrix
             </span>
-            <span className="text-xs text-slate-500 font-mono">Gradient Matrix</span>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight mt-1.5">
-            5-Tier Contrastive Dataset & Temporal Grounding
+          <h1 className="text-2xl font-serif font-bold text-[var(--foreground)] tracking-tight">
+            Contrastive Speech Dataset
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Canonical baseline speech and 10 systematic gradient variants evaluating sub-second temporal flaw detection.
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+            Calibrated baseline recordings and 10 systematic quality gradient variants for deterministic verification.
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <button
+          <Button
+            variant="secondary"
             onClick={handleRunBenchmark}
             disabled={benchmarkLoading}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 shadow-md transition-all disabled:opacity-50"
+            className="flex items-center gap-2 text-xs"
           >
             {benchmarkLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <BarChart2 className="h-4 w-4 text-cyan-400" />
+              <BarChart2 className="w-3.5 h-3.5 text-[var(--accent)]" />
             )}
-            <span>{benchmarkLoading ? 'Benchmarking 10 Tiers...' : 'Run Gradient Benchmark'}</span>
-          </button>
+            <span>{benchmarkLoading ? 'Running 10 Tiers...' : 'Run Gradient Benchmark'}</span>
+          </Button>
 
-          <button
+          <Button
+            variant="primary"
             onClick={() =>
-              evaluationApi.startDemoEvaluation().then((r) => navigate(`/results/${r.evaluationId}`))
+              evaluationApi.startDemoEvaluation().then((r) => navigate(`/processing/${r.evaluationId}`))
             }
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg transition-all"
+            className="flex items-center gap-2 text-xs"
           >
-            <Sparkles className="h-4 w-4" />
+            <Sparkles className="w-3.5 h-3.5" />
             <span>Evaluate Standard Demo</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* 5-Tier Quality & Severity Gradient Matrix */}
-      <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl backdrop-blur-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Layers className="h-5 w-5 text-indigo-400" />
-          <h3 className="text-lg font-bold text-white tracking-tight">5-Tier Evaluation Gradient Architecture</h3>
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
+          <Layers className="w-4 h-4 text-[var(--accent)]" />
+          <h3 className="text-sm font-semibold text-[var(--foreground)] tracking-tight">
+            5-Tier Evaluation Quality & Severity Gradient
+          </h3>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
-          {/* Tier 1: Ideal */}
-          <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 flex flex-col justify-between">
+          {/* Tier 1 */}
+          <div className="p-3.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] flex flex-col justify-between">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 font-mono block mb-1">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 block mb-1">
                 Tier 1
               </span>
-              <h4 className="font-bold text-white text-sm">Ideal Standard</h4>
-              <p className="text-slate-400 text-[11px] mt-1">
-                Master delivery with measured cadence (1.00x), calibrated projection, and expressive pauses.
+              <h4 className="font-semibold text-[var(--foreground)] text-sm">Ideal Standard</h4>
+              <p className="text-[var(--muted-foreground)] text-xs mt-1 leading-relaxed">
+                Measured cadence (1.00x), calibrated projection, and expressive pause rhythm.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-850 font-mono text-[10px] text-emerald-400">
-              Expected Score: 95–100
+            <div className="mt-3 pt-2 border-t border-[var(--border)] font-mono text-[11px] font-medium text-emerald-800">
+              Score: 95–100
             </div>
           </div>
 
-          {/* Tier 2: Almost Perfect */}
-          <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/30 flex flex-col justify-between">
+          {/* Tier 2 */}
+          <div className="p-3.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] flex flex-col justify-between">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 font-mono block mb-1">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-800 block mb-1">
                 Tier 2
               </span>
-              <h4 className="font-bold text-white text-sm">Almost Perfect</h4>
-              <p className="text-slate-400 text-[11px] mt-1">
+              <h4 className="font-semibold text-[var(--foreground)] text-sm">Almost Perfect</h4>
+              <p className="text-[var(--muted-foreground)] text-xs mt-1 leading-relaxed">
                 Natural tempo variation (1.05x). Competitive orator standard with no major flaws.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-850 font-mono text-[10px] text-cyan-400">
-              Expected Score: 85–92
+            <div className="mt-3 pt-2 border-t border-[var(--border)] font-mono text-[11px] font-medium text-sky-800">
+              Score: 85–94
             </div>
           </div>
 
-          {/* Tier 3: Mildly Flawed */}
-          <div className="p-4 rounded-xl bg-slate-950 border border-yellow-500/30 flex flex-col justify-between">
+          {/* Tier 3 */}
+          <div className="p-3.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] flex flex-col justify-between">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-400 font-mono block mb-1">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-800 block mb-1">
                 Tier 3
               </span>
-              <h4 className="font-bold text-white text-sm">Mildly Flawed</h4>
-              <p className="text-slate-400 text-[11px] mt-1">
-                1.10x pacing elevation, -3 dB volume fade. Intelligible but noticeable to judges.
+              <h4 className="font-semibold text-[var(--foreground)] text-sm">Mildly Flawed</h4>
+              <p className="text-[var(--muted-foreground)] text-xs mt-1 leading-relaxed">
+                1.10x pacing elevation, -3 dB volume attenuation. Intelligible but noticeable.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-850 font-mono text-[10px] text-yellow-400">
-              Expected Score: 75–84
+            <div className="mt-3 pt-2 border-t border-[var(--border)] font-mono text-[11px] font-medium text-amber-800">
+              Score: 75–84
             </div>
           </div>
 
-          {/* Tier 4: Moderately Flawed */}
-          <div className="p-4 rounded-xl bg-slate-950 border border-amber-500/30 flex flex-col justify-between">
+          {/* Tier 4 */}
+          <div className="p-3.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] flex flex-col justify-between">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 font-mono block mb-1">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-orange-800 block mb-1">
                 Tier 4
               </span>
-              <h4 className="font-bold text-white text-sm">Moderately Flawed</h4>
-              <p className="text-slate-400 text-[11px] mt-1">
-                1.20x rushed delivery, -6 dB volume attenuation, 1.5s hesitation pause gap.
+              <h4 className="font-semibold text-[var(--foreground)] text-sm">Moderately Flawed</h4>
+              <p className="text-[var(--muted-foreground)] text-xs mt-1 leading-relaxed">
+                1.20x rushed tempo, -6 dB volume attenuation, 1.5s hesitation pause gap.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-850 font-mono text-[10px] text-amber-400">
-              Expected Score: 65–74
+            <div className="mt-3 pt-2 border-t border-[var(--border)] font-mono text-[11px] font-medium text-orange-800">
+              Score: 65–74
             </div>
           </div>
 
-          {/* Tier 5: Severely Flawed */}
-          <div className="p-4 rounded-xl bg-slate-950 border border-rose-500/30 flex flex-col justify-between">
+          {/* Tier 5 */}
+          <div className="p-3.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] flex flex-col justify-between">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 font-mono block mb-1">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-800 block mb-1">
                 Tier 5
               </span>
-              <h4 className="font-bold text-white text-sm">Severely Flawed</h4>
-              <p className="text-slate-400 text-[11px] mt-1">
-                1.40x rushed pace, -10 dB faint projection, 2.8s dead air pause, robotic monotone pitch.
+              <h4 className="font-semibold text-[var(--foreground)] text-sm">Severely Flawed</h4>
+              <p className="text-[var(--muted-foreground)] text-xs mt-1 leading-relaxed">
+                1.40x rushed pace, -10 dB projection, 2.8s dead air pause, monotone pitch.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-850 font-mono text-[10px] text-rose-400">
-              Expected Score: &lt; 65
+            <div className="mt-3 pt-2 border-t border-[var(--border)] font-mono text-[11px] font-medium text-rose-800">
+              Score: &lt; 65
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Benchmark Verification Summary (If Available) */}
+      {/* Benchmark Results (if available) */}
       {benchmarkData && (
-        <div className="bg-slate-900/90 rounded-2xl border border-cyan-500/40 p-6 shadow-xl backdrop-blur-sm animate-fadeIn">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-800">
+        <Card className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[var(--border)]">
             <div>
               <div className="flex items-center gap-2">
-                <BarChart2 className="h-5 w-5 text-cyan-400" />
-                <h3 className="text-lg font-bold text-white tracking-tight">
+                <BarChart2 className="w-4 h-4 text-[var(--accent)]" />
+                <h3 className="text-sm font-semibold text-[var(--foreground)] tracking-tight">
                   Gradient Benchmark & Score Monotonicity Verification
                 </h3>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
                 Evaluation results across all 10 gradient variants verified against expected ground truth annotations.
               </p>
             </div>
 
-            <div className="flex items-center gap-3 text-xs font-mono">
+            <div className="flex items-center gap-2 text-xs font-mono">
               <span
-                className={`px-3 py-1 rounded font-bold border ${
+                className={`px-2.5 py-0.5 rounded border text-[11px] font-semibold ${
                   benchmarkData.monotonicityPassed
-                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                    : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
                 }`}
               >
-                {benchmarkData.monotonicityPassed
-                  ? '✓ MONOTONICITY SATISFIED'
-                  : '⚠ MONOTONICITY PENDING'}
+                {benchmarkData.monotonicityPassed ? '✓ Monotonicity Confirmed' : '⚠ Monotonicity In Progress'}
               </span>
-              <span className="bg-slate-800 text-cyan-300 border border-slate-700 px-3 py-1 rounded">
+              <span className="bg-[var(--surface-2)] text-[var(--muted-foreground)] border border-[var(--border)] px-2 py-0.5 rounded">
                 Evaluated: {benchmarkData.totalEvaluated} Tiers
               </span>
             </div>
           </div>
 
-          {/* Benchmark Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300 border-collapse">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-mono tracking-wider">
+                <tr className="border-b border-[var(--border)] text-[var(--muted-foreground)] uppercase text-[10px] font-mono tracking-wider">
                   <th className="py-2.5 px-3">Variant Name</th>
                   <th className="py-2.5 px-3">Tier</th>
                   <th className="py-2.5 px-3">Expected Flaw</th>
-                  <th className="py-2.5 px-3 text-center">Score</th>
-                  <th className="py-2.5 px-3 text-center">Similarity</th>
-                  <th className="py-2.5 px-3 text-center">Flaws</th>
-                  <th className="py-2.5 px-3 text-center">Temporal IoU</th>
-                  <th className="py-2.5 px-3 text-center">Action</th>
+                  <th className="py-2.5 px-3">Overall Score</th>
+                  <th className="py-2.5 px-3">Flaws Found</th>
+                  <th className="py-2.5 px-3">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
+              <tbody className="divide-y divide-[var(--border)]">
                 {benchmarkData.results.map((r, idx) => (
-                  <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-2.5 px-3 font-bold text-white">{r.variantName}</td>
+                  <tr key={idx} className="hover:bg-[var(--surface-2)] transition-colors">
+                    <td className="py-2.5 px-3 font-medium text-[var(--foreground)]">{r.variantName}</td>
+                    <td className="py-2.5 px-3 font-mono text-[var(--muted-foreground)]">
+                      {r.gradientLevel || r.tier || 'Standard'}
+                    </td>
+                    <td className="py-2.5 px-3 text-[var(--muted-foreground)]">{r.expectedFlaw}</td>
+                    <td className="py-2.5 px-3 font-mono font-semibold text-[var(--foreground)]">
+                      {r.overallScore.toFixed(1)} / 100
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-[var(--muted-foreground)]">
+                      {r.detectedFlawsCount ?? r.flawsDetected ?? 0}
+                    </td>
                     <td className="py-2.5 px-3">
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                        {r.gradientLevel}
+                      <span className="inline-flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                        Pass
                       </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-slate-400">{r.expectedFlaw.replace(/_/g, ' ')}</td>
-                    <td className="py-2.5 px-3 text-center font-bold text-cyan-300">{r.overallScore}</td>
-                    <td className="py-2.5 px-3 text-center text-slate-400">{r.similarity}%</td>
-                    <td className="py-2.5 px-3 text-center text-amber-400">{r.detectedFlawsCount}</td>
-                    <td className="py-2.5 px-3 text-center">
-                      <span
-                        className={`px-2 py-0.5 rounded font-bold ${
-                          r.temporalIoU >= 0.5
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : r.temporalIoU > 0.05
-                            ? 'bg-cyan-500/20 text-cyan-400'
-                            : 'bg-slate-800 text-slate-400'
-                        }`}
-                      >
-                        {r.temporalIoU.toFixed(2)}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      <button
-                        onClick={() => handleRunVariant(idx)}
-                        disabled={runningVariantIndex === idx}
-                        className="px-2.5 py-1 rounded text-[11px] font-sans font-semibold bg-indigo-600/80 hover:bg-indigo-600 text-white transition-colors"
-                      >
-                        {runningVariantIndex === idx ? 'Loading...' : 'Inspect'}
-                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Dataset Speech Corpus Baseline */}
-      {dataset.map((item) => (
-        <div key={item.id} className="space-y-6">
-          <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl backdrop-blur-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      {/* Dataset Samples & Variants */}
+      <div className="space-y-6">
+        <h2 className="text-lg font-serif font-semibold text-[var(--foreground)]">
+          Reference Speeches & Variants
+        </h2>
+
+        {dataset.map((item) => (
+          <Card key={item.id} className="p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[var(--border)]">
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  Speech Corpus Baseline
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--accent)] font-semibold">
+                  {item.category || 'Oratory'}
                 </span>
-                <h2 className="text-xl font-black text-white tracking-tight mt-1">{item.title}</h2>
+                <h3 className="text-base font-semibold text-[var(--foreground)] mt-0.5">
+                  {item.title}
+                </h3>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  Speaker: {item.speaker || 'Reference Orator'}
+                </p>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold font-mono">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Canonical Reference Standard</span>
-              </div>
+
+              {item.referenceAudioUrl && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--muted-foreground)] font-mono">Reference Audio:</span>
+                  <audio controls src={item.referenceAudioUrl} className="h-7 w-48" preload="none" />
+                </div>
+              )}
             </div>
 
-            <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 mb-4">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-1">
-                Canonical Transcript:
-              </span>
-              <p className="text-xs font-serif text-slate-300 italic leading-relaxed">
-                "{item.transcript}"
-              </p>
+            {/* Transcript Preview */}
+            <div className="p-3 rounded bg-[var(--surface-2)] border border-[var(--border)] mb-4 text-xs font-serif italic text-[var(--foreground)] leading-relaxed">
+              "{item.transcript}"
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
-              <FileAudio className="h-4 w-4 text-cyan-400" />
-              <span className="truncate">Reference WAV: {item.referenceAudioPath}</span>
-            </div>
-          </div>
+            {/* Available Variants */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">
+                Gradient Variants ({item.variants?.length ?? 0})
+              </h4>
 
-          {/* 10 Gradient Variant Cards */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                <Layers className="h-4 w-4 text-cyan-400" />
-                <span>Contrastive Gradient Variants ({item.variants.length})</span>
-              </h3>
-              <span className="text-xs text-slate-400">Click any card to evaluate directly in the dashboard</span>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {item.variants?.map((v, vIdx) => {
+                  const variantName = v.variantName || v.name || `Variant ${vIdx + 1}`;
+                  const key = `${item.id}-${variantName}`;
+                  const isRunning = runningKey === key;
+                  const tier = v.gradientLevel || v.tier || 'MODERATE';
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {item.variants.map((v, vIdx) => {
-                const isRunning = runningVariantIndex === vIdx;
-
-                return (
-                  <div
-                    key={vIdx}
-                    className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/50 transition-all flex flex-col justify-between shadow-lg"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${
-                            v.severity === 'HIGH'
-                              ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                              : v.severity === 'MEDIUM'
-                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          }`}
-                        >
-                          {v.severity} SEVERITY
-                        </span>
-                        <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
-                          {v.gradientLevel || 'MODERATE'}
-                        </span>
+                  return (
+                    <div
+                      key={vIdx}
+                      className="p-3 rounded border border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between hover:border-[var(--border-strong)] transition-colors"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="font-semibold text-xs text-[var(--foreground)]">
+                            {variantName}
+                          </span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[var(--surface-2)] text-[var(--muted-foreground)] border border-[var(--border)]">
+                            {tier}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[var(--muted-foreground)] leading-snug">
+                          {v.description}
+                        </p>
                       </div>
 
-                      <h4 className="font-bold text-sm text-white mb-1.5">{v.variantName}</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-3 mb-3">
-                        {v.description}
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-2 text-[10px] font-mono bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 mb-3">
-                        <div>
-                          <span className="text-slate-500 block">Expected Flaw:</span>
-                          <span className="text-slate-200 font-semibold">{v.expectedFlaw.replace(/_/g, ' ')}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">Interval:</span>
-                          <span className="text-slate-200 font-semibold">{v.expectedInterval || 'Whole Speech'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-slate-500 truncate max-w-[140px]">
-                        {v.filePath.split(/[\\/]/).pop()}
-                      </span>
-                      <button
-                        onClick={() => handleRunVariant(vIdx)}
-                        disabled={isRunning}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50"
-                      >
-                        {isRunning ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Play className="h-3 w-3 fill-current" />
+                      <div className="mt-3 pt-2.5 border-t border-[var(--border)] flex items-center justify-between gap-2">
+                        {v.audioUrl && (
+                          <audio controls src={v.audioUrl} className="h-6 w-28" preload="none" />
                         )}
-                        <span>Evaluate in Dashboard</span>
-                      </button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleRunVariant(item.id, variantName)}
+                          disabled={isRunning}
+                          className="text-[11px] px-2.5 py-1 flex items-center gap-1 shrink-0 ml-auto"
+                        >
+                          {isRunning ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <ArrowRight className="w-3 h-3 text-[var(--accent)]" />
+                          )}
+                          <span>{isRunning ? 'Evaluating...' : 'Evaluate'}</span>
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </div>
-      ))}
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

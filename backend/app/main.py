@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Counterpointing Speech Analytics & Temporal Flaw Finding API",
+    description="SpeechScope Speech Delivery Analytics & Contrastive Evaluation API",
     version="1.0.0"
 )
 
-# Enable CORS for Vite frontend (development & production ports)
+# CORS configuration restricted to allowed origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

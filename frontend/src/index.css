@@ -1,33 +1,145 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/source-serif-4";
 
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  color-scheme: dark;
+  /* Surfaces */
+  --bg: #F7F6F3;
+  --surface: #FFFFFF;
+  --surface-2: #F1EFEA;
+  --border: #E3E0D8;
+  --border-strong: #CFCBC0;
+
+  /* Text */
+  --text: #1C1B19;
+  --text-muted: #5E5B54;
+  --text-subtle: #8A867C;
+  --foreground: #1C1B19;
+  --muted-foreground: #5E5B54;
+
+  /* Accent (single brand color: deep teal-blue) */
+  --accent: #1F4E79;
+  --accent-hover: #183E60;
+  --accent-soft: #E6EEF5;
+  --accent-subtle: #E6EEF5;
+
+  /* Semantic */
+  --success: #2F6B4F;
+  --success-soft: #E5F0EA;
+  --warning: #9A6700;
+  --warning-soft: #FBF1DC;
+  --danger: #A4362B;
+  --danger-soft: #F8E7E4;
+  --info: #1F4E79;
+  --info-soft: #E6EEF5;
+
+  /* Chart series (colour-blind safe, muted) */
+  --series-ref: #1F4E79;
+  --series-participant: #C2571A;
+  --series-deviation: #6B6B6B;
+  --flaw-low: #D9B44A;
+  --flaw-med: #D9822B;
+  --flaw-high: #B5372B;
+
+  color-scheme: light;
+}
+
+@theme {
+  --color-bg: #F7F6F3;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F1EFEA;
+  --color-border: #E3E0D8;
+  --color-border-strong: #CFCBC0;
+
+  --color-text: #1C1B19;
+  --color-text-muted: #5E5B54;
+  --color-text-subtle: #8A867C;
+
+  --color-accent: #1F4E79;
+  --color-accent-hover: #183E60;
+  --color-accent-soft: #E6EEF5;
+
+  --color-success: #2F6B4F;
+  --color-success-soft: #E5F0EA;
+  --color-warning: #9A6700;
+  --color-warning-soft: #FBF1DC;
+  --color-danger: #A4362B;
+  --color-danger-soft: #F8E7E4;
+  --color-info: #1F4E79;
+  --color-info-soft: #E6EEF5;
+
+  --color-series-ref: #1F4E79;
+  --color-series-participant: #C2571A;
+  --color-series-deviation: #6B6B6B;
+  --color-flaw-low: #D9B44A;
+  --color-flaw-med: #D9822B;
+  --color-flaw-high: #B5372B;
+
+  --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, sans-serif;
+  --font-serif: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 body {
   margin: 0;
-  background-color: #0b0f19;
-  color: #f1f5f9;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbars */
+/* Tabular numbers on numeric columns and data */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Restrained transitions */
+a, button, input, select, textarea {
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Scrollbars: quiet and minimal */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: var(--surface-2);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+  background: var(--border-strong);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--text-subtle);
+}
+
+/* Dedicated Print Styles */
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+    color: #1C1B19 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-break-inside-avoid {
+    break-inside: avoid;
+  }
+  .print-break-after {
+    break-after: page;
+  }
 }

@@ -1,23 +1,39 @@
 import os
 import shutil
+import logging
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env file if present
+env_file = BASE_DIR / ".env"
+if env_file.exists():
+    load_dotenv(env_file)
+
 class Settings(BaseModel):
-    APP_NAME: str = "SpeechScope AI"
-    APP_TAGLINE: str = "Temporal Contrastive Speech Coach"
+    APP_NAME: str = "SpeechScope"
+    APP_TAGLINE: str = "Objective, timestamped feedback on speech delivery."
     APP_ENV: str = os.getenv("APP_ENV", "development")
     DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'speechscope.db'}")
     
-    UPLOAD_DIR: Path = BASE_DIR / "uploads"
-    PROCESSED_DIR: Path = BASE_DIR / "processed"
-    DATASET_DIR: Path = BASE_DIR / "dataset"
+    UPLOAD_DIR: Path = Path(os.getenv("UPLOAD_DIR", str(BASE_DIR / "uploads")))
+    PROCESSED_DIR: Path = Path(os.getenv("PROCESSED_DIR", str(BASE_DIR / "processed")))
+    DATASET_DIR: Path = Path(os.getenv("DATASET_DIR", str(BASE_DIR / "dataset")))
     
     WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "base")
     MAX_AUDIO_DURATION: int = int(os.getenv("MAX_AUDIO_DURATION", "600"))  # 10 minutes in seconds
+    MAX_FILE_SIZE_BYTES: int = int(os.getenv("MAX_FILE_SIZE_BYTES", str(50 * 1024 * 1024))) # 50 MB
+    
+    ALLOWED_ORIGINS: List[str] = [
+        origin.strip()
+        for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000").split(",")
+        if origin.strip()
+    ]
     
     ENABLE_WHISPERX: bool = os.getenv("ENABLE_WHISPERX", "false").lower() == "true"
     ENABLE_LLM_FEEDBACK: bool = os.getenv("ENABLE_LLM_FEEDBACK", "false").lower() == "true"
@@ -59,19 +75,14 @@ settings.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 (settings.DATASET_DIR / "labels").mkdir(parents=True, exist_ok=True)
 
 def find_ffmpeg_path() -> str | None:
-    """Finds ffmpeg path from PATH, environment, winget locations, or imageio_ffmpeg."""
+    """Finds ffmpeg path from FFMPEG_PATH env var, system PATH, or imageio_ffmpeg."""
+    env_ffmpeg = os.getenv("FFMPEG_PATH")
+    if env_ffmpeg and os.path.exists(env_ffmpeg):
+        return env_ffmpeg
+        
     ffmpeg_in_path = shutil.which("ffmpeg")
     if ffmpeg_in_path:
         return ffmpeg_in_path
-    
-    known_candidates = [
-        Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Links" / "ffmpeg.exe",
-        Path("C:/Users/GOWTHAMAN.S/AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe"),
-        Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages" / "Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe" / "ffmpeg-9.0.2-full_build" / "bin" / "ffmpeg.exe"
-    ]
-    for candidate in known_candidates:
-        if candidate.exists():
-            return str(candidate)
     
     try:
         import imageio_ffmpeg
@@ -81,6 +92,7 @@ def find_ffmpeg_path() -> str | None:
     except Exception:
         pass
     
+    logger.warning("FFmpeg executable not found on system PATH, FFMPEG_PATH, or imageio-ffmpeg. Audio conversion may fail.")
     return None
 
 FFMPEG_PATH = find_ffmpeg_path()

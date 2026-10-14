@@ -1,44 +1,52 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
-import { LandingPage } from './pages/LandingPage';
-import { NewEvaluationPage } from './pages/NewEvaluationPage';
-import { ProcessingPage } from './pages/ProcessingPage';
-import { ResultsPage } from './pages/ResultsPage';
-import { DatasetPage } from './pages/DatasetPage';
+import { Footer } from './components/Footer';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { Skeleton } from './components/ui/Skeleton';
+
+// Code-split page routes
+const LandingPage = lazy(() => import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })));
+const NewEvaluationPage = lazy(() => import('./pages/NewEvaluationPage').then((m) => ({ default: m.NewEvaluationPage })));
+const ProcessingPage = lazy(() => import('./pages/ProcessingPage').then((m) => ({ default: m.ProcessingPage })));
+const ResultsPage = lazy(() => import('./pages/ResultsPage').then((m) => ({ default: m.ResultsPage })));
+const DatasetPage = lazy(() => import('./pages/DatasetPage').then((m) => ({ default: m.DatasetPage })));
+const HistoryPage = lazy(() => import('./pages/HistoryPage').then((m) => ({ default: m.HistoryPage })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
+
+const PageLoader = () => (
+  <div className="max-w-4xl mx-auto px-6 py-16 space-y-4">
+    <Skeleton className="h-8 w-48" />
+    <Skeleton className="h-4 w-96" />
+    <Skeleton className="h-64 w-full mt-6" />
+  </div>
+);
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
-        <Navbar />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <div className="min-h-screen bg-[var(--bg)] text-[var(--foreground)] flex flex-col font-sans antialiased selection:bg-[var(--accent)] selection:text-white">
+          <Navbar />
 
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/evaluate" element={<NewEvaluationPage />} />
-            <Route path="/processing/:id" element={<ProcessingPage />} />
-            <Route path="/results/:id" element={<ResultsPage />} />
-            <Route path="/dataset" element={<DatasetPage />} />
-          </Routes>
-        </main>
+          <main className="flex-1">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/evaluate" element={<NewEvaluationPage />} />
+                <Route path="/processing/:id" element={<ProcessingPage />} />
+                <Route path="/results/:id" element={<ResultsPage />} />
+                <Route path="/dataset" element={<DatasetPage />} />
+                <Route path="/evaluations" element={<HistoryPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Suspense>
+          </main>
 
-        <footer className="border-t border-slate-900 bg-slate-950/80 py-8 px-6 text-center text-xs text-slate-500">
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p>
-              <strong className="text-slate-400">SpeechScope AI</strong> — Counterpointing Speech Analytics & Temporal Flaw Finding
-            </p>
-            <div className="flex items-center gap-4 text-slate-500">
-              <span>Dynamic Time Warping (DTW)</span>
-              <span>•</span>
-              <span>faster-whisper</span>
-              <span>•</span>
-              <span>librosa acoustics</span>
-            </div>
-          </div>
-        </footer>
-      </div>
-    </BrowserRouter>
+          <Footer />
+        </div>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 

@@ -1,6 +1,7 @@
 import React from 'react';
-import { FileText, Volume2, Bookmark } from 'lucide-react';
-import { FlawSegment } from '../types';
+import { FileText } from 'lucide-react';
+import { Card } from './ui/Card';
+import type { FlawSegment } from '../types';
 
 interface TranscriptViewerProps {
   transcript: string;
@@ -29,7 +30,6 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
 
   const handleWordClick = (wordObj: { word: string; part_start: number; part_end: number }) => {
     onSeekTime?.(wordObj.part_start);
-    // Find overlapping flaw
     const matchedFlaw = flaws.find(
       (f) => wordObj.part_start <= f.end && wordObj.part_end >= f.start
     );
@@ -39,39 +39,65 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
   };
 
   return (
-    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl backdrop-blur-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-        <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-cyan-400" />
-          <h3 className="text-lg font-bold text-white tracking-tight">Transcript & Grounded Delivery Regions</h3>
+    <Card className="p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[var(--border)]">
+        <div>
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
+            <h3 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
+              Grounded Delivery Transcript
+            </h3>
+          </div>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+            Click any phrase to jump to its corresponding timestamp in the audio player.
+          </p>
         </div>
-        <span className="text-xs text-slate-400">
-          Click any word or sentence to synchronize player & timeline
-        </span>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 text-xs text-[var(--muted-foreground)]">
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-0.5 bg-rose-600 inline-block" />
+            <span>Severe flaw</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-4 h-0.5 bg-amber-600 inline-block" />
+            <span>Moderate flaw</span>
+          </div>
+        </div>
       </div>
 
       {alignmentWords && alignmentWords.length > 0 ? (
-        <div className="p-5 bg-slate-950/80 rounded-xl border border-slate-800/80 flex flex-wrap gap-x-1.5 gap-y-2 text-base text-slate-300 font-serif leading-relaxed">
+        <div className="p-6 bg-[var(--surface-2)] rounded-md border border-[var(--border)] flex flex-wrap gap-x-1.5 gap-y-2 text-[17px] font-serif text-[var(--foreground)] leading-loose">
           {alignmentWords.map((w, idx) => {
             const overlappingFlaw = flaws.find(
               (f) => w.part_start <= f.end && w.part_end >= f.start
             );
             const isSelected = overlappingFlaw && selectedFlawId === overlappingFlaw.id;
 
+            let underlineClass = 'hover:text-[var(--accent)]';
+            if (isSelected) {
+              underlineClass = 'border-b-2 border-[var(--foreground)] bg-[var(--accent-subtle)] font-medium';
+            } else if (overlappingFlaw?.severity === 'HIGH') {
+              underlineClass = 'border-b-2 border-rose-600 hover:bg-rose-50';
+            } else if (overlappingFlaw?.severity === 'MEDIUM') {
+              underlineClass = 'border-b-2 border-amber-600 hover:bg-amber-50';
+            } else if (overlappingFlaw) {
+              underlineClass = 'border-b-2 border-amber-400 hover:bg-amber-50';
+            }
+
             return (
               <span
                 key={idx}
                 onClick={() => handleWordClick(w)}
-                className={`px-1.5 py-0.5 rounded cursor-pointer transition-all ${
-                  isSelected
-                    ? 'bg-rose-500/30 text-rose-200 border border-rose-500/80 ring-1 ring-rose-500 shadow-sm font-semibold'
-                    : overlappingFlaw
-                    ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25'
-                    : 'hover:bg-slate-800 hover:text-white'
+                className={`px-0.5 pb-0.5 cursor-pointer transition-colors ${underlineClass}`}
+                title={`${w.word} (${w.part_start.toFixed(2)}s – ${w.part_end.toFixed(2)}s)${
+                  overlappingFlaw ? ` • ${overlappingFlaw.type.replace(/_/g, ' ')}` : ''
                 }`}
-                title={`${w.word} (${w.part_start.toFixed(2)}s - ${w.part_end.toFixed(2)}s)${
-                  overlappingFlaw ? ` • ${overlappingFlaw.type}` : ''
-                }`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleWordClick(w);
+                }}
               >
                 {w.word}
               </span>
@@ -79,7 +105,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
           })}
         </div>
       ) : (
-        <div className="p-5 bg-slate-950/80 rounded-xl border border-slate-800/80 space-y-4 font-serif text-base text-slate-300 leading-relaxed">
+        <div className="p-6 bg-[var(--surface-2)] rounded-md border border-[var(--border)] space-y-4 font-serif text-[17px] text-[var(--foreground)] leading-relaxed">
           {sentences.map((sentence, sIdx) => {
             const matchingFlaws = flaws.filter(
               (f) =>
@@ -93,42 +119,41 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
               const isSelected = selectedFlawId === flaw.id;
 
               return (
-                <div
+                <p
                   key={sIdx}
                   onClick={() => {
                     onSelectFlaw?.(flaw);
                     onSeekTime?.(flaw.start);
                   }}
-                  className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                  className={`p-2.5 rounded cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-rose-500/20 border-rose-500/70 text-white shadow-md'
-                      : 'bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/15'
+                      ? 'bg-[var(--accent-subtle)] border-l-2 border-[var(--accent)] font-medium'
+                      : flaw.severity === 'HIGH'
+                      ? 'border-l-2 border-rose-600 hover:bg-rose-50'
+                      : 'border-l-2 border-amber-600 hover:bg-amber-50'
                   }`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onSelectFlaw?.(flaw);
+                      onSeekTime?.(flaw.start);
+                    }
+                  }}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-sans font-bold uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                      <Volume2 className="h-3 w-3" />
-                      {flaw.type.replace(/_/g, ' ')} ({flaw.start.toFixed(1)}s - {flaw.end.toFixed(1)}s)
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">Click to seek audio</span>
-                  </div>
-                  <p>{sentence}</p>
-                </div>
+                  {sentence}
+                </p>
               );
             }
 
             return (
-              <p
-                key={sIdx}
-                className="text-slate-300 hover:text-white transition-colors cursor-pointer"
-                onClick={() => onSeekTime?.(sIdx * 6.0)}
-              >
+              <p key={sIdx} className="text-[var(--foreground)] opacity-90">
                 {sentence}
               </p>
             );
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 };

@@ -5,6 +5,25 @@ export interface RubricScoreItem {
   description?: string;
 }
 
+export interface FlawMetricDetail {
+  name: string;
+  unit: string;
+  participant_val: number;
+  reference_val: number;
+  delta_pct: number;
+  threshold_pct?: number;
+  direction?: string;
+}
+
+export interface FlawExplanation {
+  summary?: string;
+  cause?: string;
+  effect?: string;
+  recommendation?: string;
+  why_flagged?: string;
+  metrics?: FlawMetricDetail[];
+}
+
 export interface FlawSegment {
   id: string;
   start: number;
@@ -13,10 +32,11 @@ export interface FlawSegment {
   type: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH';
   transcript?: string;
-  cause: string;
-  effect: string;
-  recommendation: string;
-  metrics: Record<string, any>;
+  cause?: string;
+  effect?: string;
+  recommendation?: string;
+  metrics?: Record<string, any>;
+  explanation?: FlawExplanation;
 }
 
 export interface EvaluationSummary {
@@ -26,6 +46,40 @@ export interface EvaluationSummary {
   totalFlaws: number;
   strongestArea: string;
   weakestArea: string;
+}
+
+export interface EvaluationStatus {
+  id: string;
+  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  progress: number;
+  currentStep: string;
+  current_step?: string | null;
+  overallScore?: number;
+  similarity?: number;
+  confidence?: number;
+  error?: string | null;
+  error_message?: string | null;
+}
+
+export interface EvaluationHistoryItem {
+  id: string;
+  title: string;
+  createdAt: string;
+  created_at?: string;
+  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  progress?: number;
+  overallScore?: number | null;
+  overall_score?: number | null;
+  similarity?: number | null;
+  totalFlaws?: number;
+  flaw_count?: number;
+  referenceDuration?: number;
+  participantDuration?: number;
+}
+
+export interface EvaluationHistoryResponse {
+  items: EvaluationHistoryItem[];
+  total: number;
 }
 
 export interface ValidationDetailItem {
@@ -65,11 +119,12 @@ export interface EvaluationDetail {
   evaluationId: string;
   title: string;
   transcript: string;
-  status: string;
+  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   error?: string;
   summary: EvaluationSummary;
   rubric: Record<string, number>;
   rubricDetails: RubricScoreItem[];
+  rubricScores?: RubricScoreItem[];
   flaws: FlawSegment[];
   referenceAudioUrl: string;
   participantAudioUrl: string;
@@ -108,9 +163,12 @@ export interface FeatureTimeSeries {
 }
 
 export interface DatasetVariant {
+  name?: string;
   variantName: string;
+  tier?: string;
   gradientLevel?: string;
-  filePath: string;
+  filePath?: string;
+  audioUrl?: string;
   speedFactor?: number;
   volumeDeltaDb?: number;
   expectedFlaw: string;
@@ -123,7 +181,10 @@ export interface DatasetItem {
   id: string;
   title: string;
   transcript: string;
-  referenceAudioPath: string;
+  category?: string;
+  speaker?: string;
+  referenceAudioPath?: string;
+  referenceAudioUrl?: string;
   expectedFlaws?: Array<{
     type: string;
     start: number;
@@ -137,11 +198,13 @@ export interface DatasetItem {
 
 export interface BenchmarkVariantResult {
   variantName: string;
+  tier?: string;
   gradientLevel: string;
   expectedFlaw: string;
   severity: string;
   overallScore: number;
   similarity: number;
+  flawsDetected?: number;
   detectedFlawsCount: number;
   temporalIoU: number;
   status: string;

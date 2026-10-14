@@ -1,72 +1,92 @@
 import React from 'react';
-import { RubricScoreItem } from '../types';
+import { Card } from './ui/Card';
+import type { RubricScoreItem } from '../types';
 
 interface RubricCardProps {
   rubricDetails: RubricScoreItem[];
 }
 
 export const RubricCard: React.FC<RubricCardProps> = ({ rubricDetails }) => {
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return 'bg-emerald-500 text-emerald-400';
-    if (score >= 70) return 'bg-cyan-500 text-cyan-400';
-    if (score >= 55) return 'bg-amber-500 text-amber-400';
-    return 'bg-rose-500 text-rose-400';
+  const getBarColor = (score: number) => {
+    if (score >= 85) return 'bg-[#1F4E79]';
+    if (score >= 70) return 'bg-[#2E6B9E]';
+    if (score >= 55) return 'bg-[#B45309]';
+    return 'bg-[#C2571A]';
+  };
+
+  const getScoreBadge = (score: number) => {
+    if (score >= 85) return 'text-emerald-800 bg-emerald-50 border-emerald-200';
+    if (score >= 70) return 'text-sky-800 bg-sky-50 border-sky-200';
+    if (score >= 55) return 'text-amber-800 bg-amber-50 border-amber-200';
+    return 'text-rose-800 bg-rose-50 border-rose-200';
   };
 
   return (
-    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl backdrop-blur-sm">
-      <div className="flex items-center justify-between mb-5">
+    <Card className="p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-[var(--border)]">
         <div>
-          <h3 className="text-lg font-bold text-white tracking-tight">Rubric-Based Evaluation Breakdown</h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Deterministic scores computed across 6 distinct acoustic signal dimensions
+          <h3 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
+            Rubric Dimension Breakdown
+          </h3>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+            Deterministic scores computed across 6 acoustic signal dimensions relative to reference.
           </p>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-950 text-slate-300 border border-slate-800">
-          Total: 100 Pts
+        <span className="text-xs font-mono text-[var(--muted-foreground)] bg-[var(--surface-2)] px-2.5 py-1 rounded border border-[var(--border)] shrink-0 self-start sm:self-auto">
+          Scale: 0–100 pts
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {rubricDetails.map((item) => {
           const score = Math.round(item.score);
-          const colors = getScoreColor(score);
-          const [bgColor, textColor] = colors.split(' ');
+          const barColor = getBarColor(score);
+          const badgeClass = getScoreBadge(score);
 
           return (
             <div
               key={item.category}
-              className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-slate-700/80 transition-all flex flex-col justify-between"
+              className="p-4 rounded-md border border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between hover:border-[var(--border-strong)] transition-colors"
             >
               <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <h4 className="font-semibold text-sm text-slate-200">{item.category}</h4>
-                  <span className={`text-base font-black font-mono ${textColor}`}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h4 className="font-medium text-sm text-[var(--foreground)] leading-snug">
+                    {item.category}
+                  </h4>
+                  <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded border shrink-0 ${badgeClass}`}>
                     {score}
-                    <span className="text-[11px] text-slate-500 font-normal">/100</span>
+                    <span className="text-[10px] opacity-75">/100</span>
                   </span>
                 </div>
 
-                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden mb-2.5">
+                {/* Progress track */}
+                <div className="w-full h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden my-2.5">
                   <div
-                    className={`h-full rounded-full transition-all duration-1000 ${bgColor}`}
+                    className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`}
                     style={{ width: `${score}%` }}
+                    role="progressbar"
+                    aria-valuenow={score}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${item.category} score`}
                   />
                 </div>
 
-                <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                <p className="text-xs text-[var(--muted-foreground)] leading-relaxed mt-1">
                   {item.description}
                 </p>
               </div>
 
-              <div className="mt-3 pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Rubric Weight:</span>
-                <span className="font-semibold text-slate-300">{Math.round(item.weight * 100)}%</span>
+              <div className="mt-3 pt-2.5 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--muted-foreground)]">
+                <span>Weight</span>
+                <span className="font-mono font-medium text-[var(--foreground)]">
+                  {Math.round(item.weight * 100)}%
+                </span>
               </div>
             </div>
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 };

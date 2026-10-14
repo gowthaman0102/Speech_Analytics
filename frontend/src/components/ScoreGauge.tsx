@@ -17,76 +17,91 @@ export const ScoreGauge: React.FC<ScoreGaugeProps> = ({
 }) => {
   const clampedScore = Math.max(0, Math.min(100, Math.round(score)));
 
-  let color = '#f43f5e'; // <55 Significant Improvement
-  let statusText = 'Needs Work';
-  let badgeBg = 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+  let statusText = 'Needs Practice';
+  let badgeClasses = 'bg-rose-50 text-rose-800 border-rose-200';
+  let strokeColor = '#C2571A';
 
   if (clampedScore >= 85) {
-    color = '#10b981'; // 85-100 Excellent
     statusText = 'Excellent';
-    badgeBg = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+    badgeClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+    strokeColor = '#1F4E79';
   } else if (clampedScore >= 70) {
-    color = '#06b6d4'; // 70-84 Good
-    statusText = 'Good';
-    badgeBg = 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30';
+    statusText = 'Competent';
+    badgeClasses = 'bg-sky-50 text-sky-800 border-sky-200';
+    strokeColor = '#1F4E79';
   } else if (clampedScore >= 55) {
-    color = '#f59e0b'; // 55-69 Needs Improvement
-    statusText = 'Moderate';
-    badgeBg = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+    statusText = 'Developing';
+    badgeClasses = 'bg-amber-50 text-amber-800 border-amber-200';
+    strokeColor = '#B45309';
   }
 
   const dimensions = {
-    sm: { radius: 32, stroke: 5, box: 80, fontSize: 'text-lg', labelSize: 'text-xs' },
-    md: { radius: 48, stroke: 7, box: 120, fontSize: 'text-2xl', labelSize: 'text-sm' },
-    lg: { radius: 76, stroke: 10, box: 180, fontSize: 'text-4xl', labelSize: 'text-base' },
+    sm: { radius: 28, stroke: 4, box: 72, fontSize: 'text-xl', labelSize: 'text-xs' },
+    md: { radius: 44, stroke: 6, box: 110, fontSize: 'text-3xl', labelSize: 'text-sm' },
+    lg: { radius: 64, stroke: 8, box: 156, fontSize: 'text-5xl', labelSize: 'text-base' },
   }[size];
 
   const circumference = 2 * Math.PI * dimensions.radius;
   const strokeDashoffset = circumference - (clampedScore / 100) * circumference;
 
   return (
-    <div className="flex flex-col items-center justify-center p-3">
-      <div className="relative flex items-center justify-center" style={{ width: dimensions.box, height: dimensions.box }}>
-        <svg className="transform -rotate-90" width={dimensions.box} height={dimensions.box}>
-          {/* Background circle */}
+    <div className="flex flex-col items-center justify-center p-2 text-center">
+      <div
+        className="relative flex items-center justify-center"
+        style={{ width: dimensions.box, height: dimensions.box }}
+      >
+        <svg
+          className="transform -rotate-90"
+          width={dimensions.box}
+          height={dimensions.box}
+          aria-hidden="true"
+        >
+          {/* Background track */}
           <circle
             cx={dimensions.box / 2}
             cy={dimensions.box / 2}
             r={dimensions.radius}
-            stroke="#1e293b"
+            stroke="var(--surface-2)"
             strokeWidth={dimensions.stroke}
             fill="transparent"
           />
-          {/* Progress circle */}
+          {/* Active progress */}
           <circle
             cx={dimensions.box / 2}
             cy={dimensions.box / 2}
             r={dimensions.radius}
-            stroke={color}
+            stroke={strokeColor}
             strokeWidth={dimensions.stroke}
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             fill="transparent"
-            className="transition-all duration-1000 ease-out"
+            className="transition-all duration-700 ease-out"
           />
         </svg>
+
         <div className="absolute flex flex-col items-center justify-center">
-          <span className={`font-black tracking-tight text-white ${dimensions.fontSize}`}>
+          <span className={`font-serif font-bold text-[var(--foreground)] tracking-tight ${dimensions.fontSize}`}>
             {clampedScore}
           </span>
-          {size === 'lg' && <span className="text-[11px] text-slate-400 font-semibold uppercase">out of 100</span>}
+          {size === 'lg' && (
+            <span className="text-[10px] text-[var(--muted-foreground)] font-mono uppercase tracking-wider">
+              / 100
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="mt-2 text-center">
-        <h4 className={`font-semibold text-slate-200 ${dimensions.labelSize}`}>{label}</h4>
+      <div className="mt-2.5">
+        <h4 className={`font-medium text-[var(--foreground)] ${dimensions.labelSize}`}>{label}</h4>
         {weight !== undefined && (
-          <span className="text-[11px] text-slate-500">Weight: {Math.round(weight * 100)}%</span>
+          <span className="text-xs text-[var(--muted-foreground)] block">
+            Weight: {Math.round(weight * 100)}%
+          </span>
         )}
         {showCategoryBadge && (
-          <div className="mt-1">
-            <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeBg}`}>
+          <div className="mt-1.5">
+            <span className={`inline-block text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${badgeClasses}`}>
               {statusText}
             </span>
           </div>

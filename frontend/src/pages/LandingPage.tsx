@@ -1,164 +1,220 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  Sparkles,
-  ArrowRight,
-  Target,
-  BarChart3,
-  Clock,
-  Layers,
-  CheckCircle2,
-  Cpu,
-  Radio,
-  FileCheck2,
-} from 'lucide-react';
+import { Button } from '../components/ui/Button';
 import { evaluationApi } from '../api/evaluationApi';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [openingSample, setOpeningSample] = useState<boolean>(false);
 
-  const handleRunDemo = async () => {
+  const handleOpenSample = async () => {
     try {
+      setOpeningSample(true);
       const res = await evaluationApi.startDemoEvaluation();
-      navigate(`/results/${res.evaluationId}`);
-    } catch (e) {
-      navigate('/evaluate?demo=true');
+      navigate(`/processing/${res.evaluationId}`);
+    } catch {
+      navigate('/evaluate');
+    } finally {
+      setOpeningSample(false);
     }
   };
 
-  const featurePillars = [
-    {
-      icon: Clock,
-      title: 'Temporal Flaw Detection',
-      desc: 'Grounds delivery issues to exact sub-second timestamps, highlighting exactly where speech rushed, faded, or stalled.',
-      color: 'from-rose-500/20 to-orange-500/20 text-rose-400 border-rose-500/30',
-    },
-    {
-      icon: Layers,
-      title: 'Contrastive Speech Analysis',
-      desc: 'Normalizes and compares the speaker against an ideal delivery of the exact same transcript via Dynamic Time Warping (DTW).',
-      color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30',
-    },
-    {
-      icon: BarChart3,
-      title: 'Deterministic Rubric Scoring',
-      desc: 'Generates reproducible 0–100 scores across Pace & Fluency, Pitch Modulation, Pause & Rhythm, and Vocal Energy.',
-      color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30',
-    },
-    {
-      icon: Cpu,
-      title: 'Causal & Measurable Feedback',
-      desc: 'No vague remarks. Supplies acoustic evidence (WPM, dB, Hz delta) and actionable recommendations for every flaw.',
-      color: 'from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/30',
-    },
-  ];
-
   return (
-    <div className="min-h-screen pb-20">
+    <div className="max-w-6xl mx-auto px-6 py-12 md:py-16 space-y-16">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 px-6 overflow-hidden">
-        {/* Ambient glow backgrounds */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-tr from-indigo-600/20 via-cyan-500/20 to-emerald-400/10 blur-[120px] pointer-events-none rounded-full" />
-
-        <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 text-xs font-semibold text-slate-300 mb-6 shadow-sm">
-            <Radio className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
-            <span>Temporal Contrastive Speech Coach</span>
-          </div>
-
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
-            SpeechScope{' '}
-            <span className="bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              AI
-            </span>
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        {/* Left Column: Editorial Value Proposition */}
+        <div className="lg:col-span-7 space-y-5 text-left">
+          <h1 className="text-3xl sm:text-4xl lg:text-[40px] font-semibold text-[--text] tracking-tight leading-[1.15]">
+            See exactly where a speech goes off course.
           </h1>
 
-          <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
-            Turn subjective speech judging into <strong className="text-white font-semibold">measurable</strong>,{' '}
-            <strong className="text-white font-semibold">temporally grounded</strong>, and{' '}
-            <strong className="text-white font-semibold">explainable</strong> contrastive coaching.
+          <p className="text-lg text-[--text-muted] leading-relaxed max-w-[54ch]">
+            SpeechScope aligns a speaker’s delivery against an ideal reference reading of the same transcript,
+            grounding pace, volume, pitch, and pause differences with sub-second timestamps and measurable evidence.
           </p>
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              to="/evaluate"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-bold bg-gradient-to-r from-indigo-500 via-indigo-600 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 text-white shadow-xl shadow-indigo-500/25 hover:scale-105 active:scale-95 transition-all"
-            >
-              <span>Analyze Speech</span>
-              <ArrowRight className="h-4 w-4" />
+          <div className="pt-2 flex items-center gap-3 flex-wrap">
+            <Link to="/evaluate">
+              <Button variant="primary" size="lg">
+                Start an evaluation
+              </Button>
             </Link>
-
-            <button
-              onClick={handleRunDemo}
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-base font-bold bg-slate-900 hover:bg-slate-800 text-slate-100 border border-slate-700 shadow-lg hover:scale-105 active:scale-95 transition-all"
+            <Button
+              variant="secondary"
+              size="lg"
+              loading={openingSample}
+              onClick={handleOpenSample}
             >
-              <Sparkles className="h-4 w-4 text-cyan-400" />
-              <span>Try Demo Evaluation</span>
-            </button>
+              Open the sample evaluation
+            </Button>
           </div>
+        </div>
 
-          <div className="mt-8 flex items-center justify-center gap-6 text-xs text-slate-400">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>No Cloud API Key Needed</span>
+        {/* Right Column: Static, Real-Looking Waveform Preview */}
+        <div className="lg:col-span-5">
+          <div className="p-4 rounded-[8px] bg-[--surface] border border-[--border] space-y-3">
+            <div className="flex items-center justify-between text-xs text-[--text-muted] border-b border-[--border] pb-2 font-mono">
+              <span>Synchronized analysis</span>
+              <span>00:00 — 00:30.9</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>Deterministic Signal Math</span>
+
+            {/* Reference track */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px] font-mono text-[--text-muted]">
+                <span className="font-medium text-[--series-ref]">Reference</span>
+                <span>135 WPM • Standard</span>
+              </div>
+              <div className="h-14 bg-[--surface-2] rounded-[4px] p-2 flex items-center justify-between">
+                <svg viewBox="0 0 300 40" className="w-full h-full text-[--series-ref]" fill="none" preserveAspectRatio="none">
+                  <path
+                    d="M0,20 Q15,5 30,20 T60,20 T90,8 T120,20 T150,20 T180,6 T210,20 T240,20 T270,12 T300,20"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                  />
+                  <path
+                    d="M0,20 Q15,35 30,20 T60,20 T90,32 T120,20 T150,20 T180,34 T210,20 T240,20 T270,28 T300,20"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                  />
+                </svg>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>Sub-Second Grounding</span>
+
+            {/* Participant track with highlighted moment */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px] font-mono text-[--text-muted]">
+                <span className="font-medium text-[--series-participant]">Participant</span>
+                <span>182 WPM • Accelerated</span>
+              </div>
+              <div className="h-14 bg-[--surface-2] rounded-[4px] p-2 relative overflow-hidden flex items-center justify-between">
+                {/* Highlighted flaw region */}
+                <div
+                  className="absolute top-0 bottom-0 left-[28%] w-[26%] bg-[#D9822B]/15 border-t-2 border-[#D9822B]"
+                  title="Flagged: Rushed Delivery (+40% WPM)"
+                />
+                <svg viewBox="0 0 300 40" className="w-full h-full text-[--series-participant]" fill="none" preserveAspectRatio="none">
+                  <path
+                    d="M0,20 Q10,2 20,20 T40,20 T60,2 T80,20 T100,2 T120,20 T150,20 T180,2 T210,20 T240,20 T270,2 T300,20"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                  />
+                  <path
+                    d="M0,20 Q10,38 20,20 T40,20 T60,38 T80,20 T100,38 T120,20 T150,20 T180,38 T210,20 T240,20 T270,38 T300,20"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[--border] flex items-center justify-between text-[11px] text-[--text-muted]">
+              <span className="inline-flex items-center gap-1.5 font-medium text-[#D9822B]">
+                <span className="w-2 h-2 rounded-full bg-[#D9822B]" />
+                04.6s — 08.0s Rushed delivery
+              </span>
+              <span className="font-mono text-[--text-subtle]">+40% pace delta</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Feature Pillars */}
-      <section className="max-w-6xl mx-auto px-6 py-12">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            How Contrastive Speech Evaluation Works
+      {/* How it works (Vertical 3-step list with hairline dividers) */}
+      <section className="border-t border-[--border] pt-12 text-left space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold text-[--text] tracking-tight">
+            How evaluation works
           </h2>
-          <p className="text-sm text-slate-400 mt-2 max-w-2xl mx-auto">
-            Instead of asking "is this speech good?", SpeechScope mathematically measures exact deviations from a high-quality delivery of the same words.
+          <p className="text-sm text-[--text-muted] mt-1">
+            Three straightforward stages from raw audio to sub-second acoustic diagnosis.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {featurePillars.map((feat, idx) => {
-            const Icon = feat.icon;
-            return (
-              <div
-                key={idx}
-                className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all shadow-xl backdrop-blur-sm group"
-              >
-                <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${feat.color} flex items-center justify-center mb-4 border`}>
-                  <Icon className="h-6 w-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">{feat.title}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">{feat.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Scientific Principle Disclaimer */}
-      <section className="max-w-4xl mx-auto px-6 mt-6">
-        <div className="p-6 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 backdrop-blur-sm">
-          <div className="flex items-start gap-4">
-            <Target className="h-6 w-6 text-indigo-400 flex-shrink-0 mt-0.5" />
+        <div className="divide-y divide-[--border] border border-[--border] rounded-[8px] bg-[--surface]">
+          <div className="p-5 flex items-start gap-4">
+            <span className="text-sm font-semibold font-mono text-[--accent] shrink-0 w-6 pt-0.5">
+              1
+            </span>
             <div>
-              <h4 className="text-sm font-bold text-indigo-300 uppercase tracking-wider">
-                Reference-Relative Delivery Analysis
-              </h4>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                The system measures acoustic differences relative to the selected reference performance. Scores represent similarity to the configured evaluation rubric and baseline rather than an absolute universal measure of speaking ability.
+              <h3 className="text-sm font-semibold text-[--text]">Upload speech and reference</h3>
+              <p className="text-xs text-[--text-muted] mt-1 leading-relaxed">
+                Provide the canonical transcript alongside a high-quality reference recording and the participant’s recording.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-5 flex items-start gap-4">
+            <span className="text-sm font-semibold font-mono text-[--accent] shrink-0 w-6 pt-0.5">
+              2
+            </span>
+            <div>
+              <h3 className="text-sm font-semibold text-[--text]">Align timelines and extract signals</h3>
+              <p className="text-xs text-[--text-muted] mt-1 leading-relaxed">
+                Sub-second lexical alignment maps matching words. Dynamic Time Warping aligns pitch contours, volume dynamics, and speaking cadence.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-5 flex items-start gap-4">
+            <span className="text-sm font-semibold font-mono text-[--accent] shrink-0 w-6 pt-0.5">
+              3
+            </span>
+            <div>
+              <h3 className="text-sm font-semibold text-[--text]">Review timestamped feedback and scores</h3>
+              <p className="text-xs text-[--text-muted] mt-1 leading-relaxed">
+                Explore flagged delivery moments with side-by-side waveforms, measurable acoustic deltas, reproducible rubric scores, and clear advice.
               </p>
             </div>
           </div>
         </div>
+      </section>
+
+      {/* What you get (Two-column definition list) */}
+      <section className="border-t border-[--border] pt-12 text-left space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold text-[--text] tracking-tight">
+            What you get
+          </h2>
+          <p className="text-sm text-[--text-muted] mt-1">
+            Deterministic evaluation reports designed for speakers, coaches, and competition judges.
+          </p>
+        </div>
+
+        <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm">
+          <div className="space-y-1">
+            <dt className="font-semibold text-[--text]">Scores by category</dt>
+            <dd className="text-xs text-[--text-muted] leading-relaxed">
+              Standard 0–100 rubric scores across Pace & Fluency, Pitch Modulation, Pause Dynamics, Vocal Energy, Clarity, and Overall Delivery.
+            </dd>
+          </div>
+
+          <div className="space-y-1">
+            <dt className="font-semibold text-[--text]">Timestamped flags</dt>
+            <dd className="text-xs text-[--text-muted] leading-relaxed">
+              Sub-second temporal intervals highlighting exactly where delivery rushed, slowed down, paused awkwardly, or dropped projection.
+            </dd>
+          </div>
+
+          <div className="space-y-1">
+            <dt className="font-semibold text-[--text]">Plain-language explanations</dt>
+            <dd className="text-xs text-[--text-muted] leading-relaxed">
+              Every flagged moment includes what happened, the perceptual impact on listeners, and practical coaching suggestions.
+            </dd>
+          </div>
+
+          <div className="space-y-1">
+            <dt className="font-semibold text-[--text]">Side-by-side waveforms</dt>
+            <dd className="text-xs text-[--text-muted] leading-relaxed">
+              Synchronized audio inspection with synchronized seeking, metric overlays, and interactive transcript scrubbing.
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      {/* Calm note explaining reference-relative scoring */}
+      <section className="p-4 rounded-[8px] bg-[--surface-2] border border-[--border] text-xs text-[--text-muted] text-left leading-relaxed">
+        <strong className="text-[--text] font-semibold">Note on reference-relative evaluation: </strong>
+        Scores and flagged differences reflect contrast against the chosen reference reading, not an absolute or universal judgment of rhetorical style. Choosing an appropriate reference ensures evaluation aligns with your competition’s conventions.
       </section>
     </div>
   );

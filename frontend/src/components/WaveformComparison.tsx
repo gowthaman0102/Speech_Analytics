@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, AlertTriangle, FastForward } from 'lucide-react';
-import { FlawSegment } from '../types';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Lock, Unlock } from 'lucide-react';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import type { FlawSegment } from '../types';
 
 interface WaveformComparisonProps {
   referenceAudioUrl: string;
@@ -28,6 +30,7 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [activeTrack, setActiveTrack] = useState<'participant' | 'reference' | 'both'>('participant');
+  const [playbackRate, setPlaybackRate] = useState<number>(1.0);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -38,11 +41,11 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
     const wsRef = WaveSurfer.create({
       container: refContainerRef.current,
-      waveColor: '#475569',
-      progressColor: '#38bdf8',
-      cursorColor: '#38bdf8',
+      waveColor: '#A6C8E0',
+      progressColor: '#1F4E79',
+      cursorColor: '#1F4E79',
       cursorWidth: 2,
-      height: 72,
+      height: 64,
       barWidth: 2,
       barGap: 2,
       barRadius: 2,
@@ -63,11 +66,11 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
     const wsPart = WaveSurfer.create({
       container: partContainerRef.current,
-      waveColor: '#64748b',
-      progressColor: '#f43f5e',
-      cursorColor: '#f43f5e',
+      waveColor: '#E8B896',
+      progressColor: '#C2571A',
+      cursorColor: '#C2571A',
       cursorWidth: 2,
-      height: 72,
+      height: 64,
       barWidth: 2,
       barGap: 2,
       barRadius: 2,
@@ -94,7 +97,7 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
     };
   }, [participantAudioUrl]);
 
-  // Handle external seek request (e.g. user clicked a flaw in timeline)
+  // Synchronized seek handling
   useEffect(() => {
     if (seekTime !== null && seekTime !== undefined && duration > 0) {
       const targetProgress = Math.max(0, Math.min(1, seekTime / duration));
@@ -107,6 +110,22 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
       }
     }
   }, [seekTime, duration]);
+
+  // Spacebar shortcut for Play/Pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
 
   const togglePlay = () => {
     const partWs = partWaveSurfer.current;
@@ -125,7 +144,6 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
         partWs.pause();
         refWs.play();
       } else {
-        // synchronized
         const time = partWs.getCurrentTime();
         refWs.setTime(time);
         refWs.play();
@@ -151,6 +169,12 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
     if (refWaveSurfer.current) refWaveSurfer.current.setMuted(nextMute);
   };
 
+  const handleRateChange = (rate: number) => {
+    setPlaybackRate(rate);
+    if (partWaveSurfer.current) partWaveSurfer.current.setPlaybackRate(rate);
+    if (refWaveSurfer.current) refWaveSurfer.current.setPlaybackRate(rate);
+  };
+
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const remSecs = Math.floor(secs % 60);
@@ -159,112 +183,109 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
   };
 
   return (
-    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl backdrop-blur-sm">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+    <Card className="p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--border)]">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-white tracking-tight">Audio Waveform & Flaw Alignment</h3>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              Interactive Audio
+            <h3 className="text-base font-semibold text-[var(--foreground)] tracking-tight">
+              Waveform Alignment & Flaw Markers
+            </h3>
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--muted-foreground)] border border-[var(--border)]">
+              Interactive
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Click any flaw marker or waveform region to scrub and listen to the acoustic difference
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+            Click any flaw region or wave position to seek. Press <kbd className="px-1 py-0.5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[10px] font-mono">Space</kbd> to toggle playback.
           </p>
         </div>
 
-        {/* Playback Controls */}
-        <div className="flex items-center gap-3">
-          {/* Track selector */}
-          <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-semibold">
-            <button
-              onClick={() => {
-                setActiveTrack('participant');
-                if (refWaveSurfer.current) refWaveSurfer.current.pause();
-              }}
-              className={`px-3 py-1.5 rounded-md transition-all ${
-                activeTrack === 'participant' ? 'bg-rose-500 text-white shadow' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Participant
-            </button>
-            <button
-              onClick={() => {
-                setActiveTrack('reference');
-                if (partWaveSurfer.current) partWaveSurfer.current.pause();
-              }}
-              className={`px-3 py-1.5 rounded-md transition-all ${
-                activeTrack === 'reference' ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Reference
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleRestart}
-              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-              title="Restart"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </button>
-            <button
-              onClick={togglePlay}
-              className={`p-3 rounded-xl font-bold flex items-center justify-center transition-all ${
-                isPlaying
-                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
-                  : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/20'
-              }`}
-            >
-              {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current ml-0.5" />}
-            </button>
-            <button
-              onClick={toggleMute}
-              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? <VolumeX className="h-4 w-4 text-rose-400" /> : <Volume2 className="h-4 w-4" />}
-            </button>
-          </div>
-
-          <div className="font-mono text-xs px-3 py-2 bg-slate-950 rounded-lg border border-slate-800 text-slate-300">
-            <span className="text-white font-bold">{formatTime(currentTime)}</span>
-            <span className="text-slate-500"> / {formatTime(duration)}</span>
-          </div>
+        {/* Track selector */}
+        <div className="flex items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-0.5 text-xs">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTrack('participant');
+              if (refWaveSurfer.current) refWaveSurfer.current.pause();
+            }}
+            className={`px-3 py-1 rounded transition-colors ${
+              activeTrack === 'participant'
+                ? 'bg-[var(--surface)] text-[var(--series-participant)] font-medium shadow-xs'
+                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+            }`}
+          >
+            Participant
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTrack('reference');
+              if (partWaveSurfer.current) partWaveSurfer.current.pause();
+            }}
+            className={`px-3 py-1 rounded transition-colors ${
+              activeTrack === 'reference'
+                ? 'bg-[var(--surface)] text-[var(--series-ref)] font-medium shadow-xs'
+                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+            }`}
+          >
+            Reference
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTrack('both');
+            }}
+            className={`px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
+              activeTrack === 'both'
+                ? 'bg-[var(--surface)] text-[var(--foreground)] font-medium shadow-xs'
+                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+            }`}
+            title="Lock Playheads: Play both tracks simultaneously"
+          >
+            {activeTrack === 'both' ? <Lock className="w-3 h-3 text-[var(--accent)]" /> : <Unlock className="w-3 h-3" />}
+            <span>Lock</span>
+          </button>
         </div>
       </div>
 
-      {/* Waveforms */}
+      {/* Waveform Displays */}
       <div className="space-y-4">
         {/* Reference Waveform */}
-        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800/80">
+        <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-cyan-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Reference / Baseline Audio</span>
+              <span className="w-2 h-2 rounded-full bg-[#1F4E79]" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#1F4E79]">
+                Reference Delivery
+              </span>
             </div>
-            <span className="text-[11px] text-slate-400">Target Acoustic Archetype</span>
+            <span className="text-xs text-[var(--muted-foreground)]">Baseline Archetype</span>
           </div>
-          <div ref={refContainerRef} className="cursor-pointer" />
+          <div className="rounded bg-[var(--surface-2)] p-2">
+            <div ref={refContainerRef} className="cursor-pointer" />
+          </div>
         </div>
 
-        {/* Participant Waveform with Flaw Overlay */}
-        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800/80 relative">
+        {/* Participant Waveform with Flaws Overlay */}
+        <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-rose-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Participant Performance Audio</span>
+              <span className="w-2 h-2 rounded-full bg-[#C2571A]" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#C2571A]">
+                Participant Delivery
+              </span>
             </div>
-            <span className="text-[11px] text-slate-400">{flaws.length} Flaw Regions Identified</span>
+            <span className="text-xs text-[var(--muted-foreground)]">
+              {flaws.length} Flaw Region{flaws.length === 1 ? '' : 's'}
+            </span>
           </div>
 
-          <div className="relative">
+          <div className="relative rounded bg-[var(--surface-2)] p-2">
             <div ref={partContainerRef} className="cursor-pointer" />
 
             {/* Visual Flaw Overlay Bands */}
             {duration > 0 && (
-              <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute inset-y-2 inset-x-2 pointer-events-none">
                 {flaws.map((flaw) => {
                   const left = (flaw.start / duration) * 100;
                   const width = ((flaw.end - flaw.start) / duration) * 100;
@@ -272,10 +293,10 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
                   const colorClass =
                     flaw.severity === 'HIGH'
-                      ? 'bg-rose-500/25 border-rose-500/60'
+                      ? 'bg-rose-500/20 border-rose-500/70 text-rose-900'
                       : flaw.severity === 'MEDIUM'
-                      ? 'bg-amber-500/25 border-amber-500/60'
-                      : 'bg-yellow-500/20 border-yellow-500/50';
+                      ? 'bg-amber-500/20 border-amber-500/70 text-amber-900'
+                      : 'bg-yellow-500/20 border-yellow-500/60 text-yellow-900';
 
                   return (
                     <div
@@ -284,14 +305,16 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
                         e.stopPropagation();
                         onSelectFlaw?.(flaw.id);
                       }}
-                      style={{ left: `${left}%`, width: `${Math.max(1.5, width)}%` }}
+                      style={{ left: `${left}%`, width: `${Math.max(1.8, width)}%` }}
                       className={`absolute top-0 bottom-0 pointer-events-auto cursor-pointer border-x transition-all group ${colorClass} ${
-                        isSelected ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-900 bg-rose-500/40 z-10' : ''
+                        isSelected
+                          ? 'ring-2 ring-[var(--foreground)] ring-offset-1 bg-rose-500/35 z-10'
+                          : 'hover:brightness-95'
                       }`}
-                      title={`${flaw.type} (${formatTime(flaw.start)} - ${formatTime(flaw.end)})`}
+                      title={`${flaw.type} (${formatTime(flaw.start)} – ${formatTime(flaw.end)})`}
                     >
-                      <div className="opacity-0 group-hover:opacity-100 absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-20 transition-opacity">
-                        {flaw.type.replace(/_/g, ' ')}
+                      <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] text-[11px] font-medium px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-20 transition-opacity">
+                        {flaw.type.replace(/_/g, ' ')} (+{flaw.duration.toFixed(1)}s)
                       </div>
                     </div>
                   );
@@ -302,26 +325,87 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="mt-4 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-rose-500/40 border border-rose-500" />
-            <span>High Severity Flaw</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-amber-500/40 border border-amber-500" />
-            <span>Medium Severity</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-yellow-500/40 border border-yellow-500" />
-            <span>Low Severity</span>
+      {/* Transport Controls Bar */}
+      <div className="mt-4 pt-4 border-t border-[var(--border)] flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="primary"
+            onClick={togglePlay}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? (
+              <>
+                <Pause className="w-3.5 h-3.5" />
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 ml-0.5" />
+                <span>Play</span>
+              </>
+            )}
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={handleRestart}
+            className="p-2 text-xs"
+            title="Restart from beginning"
+            aria-label="Restart"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={toggleMute}
+            className="p-2 text-xs"
+            title={isMuted ? 'Unmute' : 'Mute'}
+            aria-label={isMuted ? 'Unmute' : 'Mute'}
+          >
+            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-600" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </Button>
+
+          {/* Time Readout */}
+          <div className="font-mono text-xs px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] ml-2">
+            <span className="font-semibold">{formatTime(currentTime)}</span>
+            <span className="text-[var(--muted-foreground)]"> / {formatTime(duration)}</span>
           </div>
         </div>
-        <p className="text-[11px] text-slate-500">
-          Normalized reference and participant timelines synchronized via Dynamic Time Warping (DTW)
-        </p>
+
+        {/* Playback speed selector & legend */}
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1">
+            <span className="text-[var(--muted-foreground)] mr-1">Speed:</span>
+            {[0.75, 1.0, 1.25, 1.5].map((rate) => (
+              <button
+                key={rate}
+                type="button"
+                onClick={() => handleRateChange(rate)}
+                className={`px-1.5 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                  playbackRate === rate
+                    ? 'bg-[var(--accent)] text-white font-medium'
+                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                }`}
+              >
+                {rate}x
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3 text-[11px] text-[var(--muted-foreground)] border-l border-[var(--border)] pl-4">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-rose-500/40 border border-rose-500" />
+              <span>High Flaw</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/40 border border-amber-500" />
+              <span>Medium</span>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </Card>
   );
 };

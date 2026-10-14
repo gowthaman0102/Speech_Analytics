@@ -1,13 +1,14 @@
-# SpeechScope: Temporal Contrastive Speech Coach
+# SpeechScope: Automated Semantic-Aware Speech Coach & Temporal Flaw Finder
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6.svg?logo=typescript)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38B2AC.svg?logo=tailwind-css)](https://tailwindcss.com)
 [![faster-whisper](https://img.shields.io/badge/faster--whisper-1.2-FF6F00.svg)](https://github.com/SYSTRAN/faster-whisper)
+[![sentence-transformers](https://img.shields.io/badge/sentence--transformers-all--MiniLM--L6--v2-blue.svg)](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 [![librosa](https://img.shields.io/badge/librosa-1.0-2C5E8A.svg)](https://librosa.org)
 
-> **Turn subjective speech judging into measurable, temporally grounded, and explainable contrastive coaching.**
+> **Automated speech delivery analysis and temporal flaw finding without requiring reference audio or transcripts.**
 
 ---
 
@@ -15,43 +16,72 @@
 
 Competitive speech events (Interpretive Reading, Declamation, Extemporaneous Speaking, Persuasive Oratory, and Debate) evaluate both **speech content** and **speech delivery** (pacing, modulation, pause dynamics, energy contrast, fluency). Human judging in these competitions is notoriously subjective and often produces vague feedback such as *"Improve modulation"* or *"Your pacing is inconsistent."*
 
-**SpeechScope** solves this by implementing a **Temporal Contrastive Speech Coaching Architecture**:
-Instead of evaluating a recording in isolation, the participant's speech is aligned and compared against an ideal reference performance of the **exact same transcript**. The system temporally grounds delivery flaws to exact sub-second timestamps, explains why each flaw occurred using measurable acoustic signal differences (WPM, Hz, RMS dB), and computes deterministic, rubric-based scores across a 5-tier severity gradient.
+**SpeechScope** provides an **Automated Semantic-Aware Delivery Evaluation Pipeline**:
+- **Zero Reference Audio or Transcript Required**: Users upload only their **Participant Audio** (`.wav`, `.mp3`, `.m4a`, `.flac`) or **Participant Video** (`.mp4`, `.mov`, `.mkv`, `.webm`).
+- **Automated ASR & Segmentation**: `faster-whisper` automatically transcribes speech and extracts word boundaries, pause durations, and sentence segments.
+- **Semantic Intent Classification**: Embeddings from `sentence-transformers/all-MiniLM-L6-v2` classify communicative intent (e.g., inquiry, persuasive claim, emotional contrast, call-to-action) and rhetorical sentence roles.
+- **Expected Delivery Profile**: Dynamically calculates recommended prosodic ranges (tempo, pitch variation, energy, intonation) appropriate for the semantic content.
+- **Temporal Flaw Grounding**: Pinpoints vocal delivery flaws to exact sub-second timestamps, explains the acoustic cause (WPM, Hz, RMS dB), and computes deterministic 6-dimension rubric scores.
+- **Dual Comparison Mode Preserved**: Also supports contrastive reference-audio comparison when reference baselines are available.
 
-The application features a **human-crafted analyst design system** (warm paper `#F7F6F3` background, crisp surfaces, editorial serif typography for speech transcripts, and color-blind safe data series).
+The application features a **human-crafted analyst design system** (warm paper `#F7F6F3` background, crisp surfaces, editorial serif typography for speech transcripts, interactive sentence analyzer, and color-blind safe data series).
 
 ---
 
-## 2. Contrastive System Architecture
+## 2. System Architecture
 
-```text
-Same Transcript
-      │
-      ├───────────────────────────┐
-      │                           │
-      ▼                           ▼
-Ideal / Reference          Participant Speech
-Speech Audio               Speech Audio
-      │                           │
-      ▼                           ▼
-Acoustic Features          Acoustic Features
-(F0, RMS, WPM, MFCC)       (F0, RMS, WPM, MFCC)
-      │                           │
-      └─────────────┬─────────────┘
-                    ▼
-       Lexical & DTW Temporal Alignment
-                    ▼
-        Contrastive Comparison Engine
-                    ▼
-         Feature Deviation Contours
-                    ▼
-      Sub-Second Temporal Flaw Regions
-       (IoU Ground-Truth Validation)
-                    ▼
-          Rubric-Based Scores (0-100)
-                    ▼
-       Actionable Coaching & Measurement Rationale
-```
+### Mode A: Automated Semantic-Aware Delivery Pipeline (Default)
+`	ext
+                  Participant Audio / Video
+                              │
+                              ▼
+                Media Ingestion & Audio Normalization
+                    (16kHz Mono PCM WAV via FFmpeg)
+                              │
+                              ▼
+                    Automated Whisper ASR
+               (Word Timestamps & Transcript)
+                              │
+                              ▼
+                Sentence Segmentation & Rhetorical Pauses
+                              │
+                              ▼
+                Semantic & Intent Classification
+             (sentence-transformers all-MiniLM-L6-v2)
+                              │
+                              ▼
+                Expected Delivery Profile Engine
+             (Target Prosodic Ranges for Each Intent)
+                              │
+                              ▼
+                Actual Acoustic Feature Extraction
+                    (F0, RMS, WPM, Z-Scores)
+                              │
+                              ▼
+                 Semantic-Prosody Deviation Matrix
+                              │
+                              ▼
+                Sub-Second Temporal Flaws & 6-Rubric Scores
+                              │
+                              ▼
+                Explainable Diagnostics & Interactive UI
+`
+
+### Mode B: Dual-Recording Contrastive Alignment (When Reference Audio is Provided)
+`	ext
+    Reference Speech Audio               Participant Speech Audio
+              │                                      │
+              ▼                                      ▼
+    Acoustic Features (F0, RMS, WPM)       Acoustic Features (F0, RMS, WPM)
+              │                                      │
+              └──────────────────┬───────────────────┘
+                                 ▼
+                     Dynamic Time Warping (DTW)
+                                 ▼
+                      Contrastive Delta Contours
+                                 ▼
+                     Temporal Flaw Discrepancies
+`
 
 ---
 
@@ -185,7 +215,11 @@ npm run dev
 
 ## 8. Verification & Acceptance Tests
 
-Run the complete contrastive gradient acceptance test suite:
+### 1. Automated Semantic Pipeline Test (Single Media Upload)
+ash
+backend/venv/Scripts/python.exe scripts/test_automated_semantic.py
+
+### 2. Contrastive Gradient Acceptance Test Suite (Dual-Reference Mode)
 ```bash
 backend\venv\Scripts\python.exe scripts/test_gradient_acceptance.py
 ```

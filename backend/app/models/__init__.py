@@ -1,4 +1,4 @@
-from .models import Speech, Recording, Evaluation, RubricScore, FlawSegment, EvaluationFeatures
+from .models import Speech, Recording, Evaluation, RubricScore, FlawSegment, EvaluationFeatures, SentenceAnalysis
 
 __all__ = [
     "Speech",
@@ -7,4 +7,5 @@ __all__ = [
     "RubricScore",
     "FlawSegment",
     "EvaluationFeatures",
+    "SentenceAnalysis",
 ]

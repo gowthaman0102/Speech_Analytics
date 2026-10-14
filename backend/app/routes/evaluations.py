@@ -10,7 +10,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db, Base, engine, SessionLocal
-from ..models import Speech, Recording, Evaluation, RubricScore, FlawSegment, EvaluationFeatures
+import numpy as np
+from ..models import Speech, Recording, Evaluation, RubricScore, FlawSegment, EvaluationFeatures, SentenceAnalysis
 from ..config import settings
 from ..schemas.schemas import (
     EvaluationDetailResponse,
@@ -18,6 +19,7 @@ from ..schemas.schemas import (
     EvaluationSummary,
     FlawSegmentResponse,
     RubricScoreItem,
+    SentenceAnalysisItem,
     DatasetItemSchema,
     DatasetVariantSchema,
     BenchmarkResponse,
@@ -29,14 +31,21 @@ from ..schemas.schemas import (
     EvaluationHistoryResponse,
     EvaluateDatasetVariantRequest
 )
-from ..services.audio_service import convert_and_preprocess_audio
+from ..services.media_service import process_input_media, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS
+from ..services.sentence_segmentation_service import segment_transcript_sentences
+from ..services.semantic_analysis_service import compute_sentence_embeddings, extract_important_words_from_sentence
+from ..services.intent_classifier import classify_sentence_intents, detect_sentence_role
+from ..services.delivery_expectation_service import generate_expected_delivery_profile
+from ..services.prosody_service import extract_global_audio_features, extract_sentence_prosody_features
+from ..services.semantic_prosody_comparator import compare_sentence_expected_vs_actual
+from ..services.flaw_detector import detect_semantic_prosodic_flaws, detect_delivery_flaws
+from ..services.scoring_engine import calculate_semantic_evaluation_scores, calculate_rubric_scores
+from ..services.explanation_engine import generate_speech_explanation_summary, enrich_flaws_with_explanations
 from ..services.transcription_service import transcribe_and_align
+from ..services.audio_service import convert_and_preprocess_audio
 from ..services.alignment_service import align_transcripts
 from ..services.feature_service import extract_acoustic_features
 from ..services.temporal_analysis import perform_dtw_alignment
-from ..services.flaw_detector import detect_delivery_flaws
-from ..services.explanation_engine import enrich_flaws_with_explanations
-from ..services.scoring_engine import calculate_rubric_scores
 from ..services.validation_service import calculate_temporal_iou, validate_flaws_against_ground_truth
 
 logger = logging.getLogger(__name__)
@@ -45,15 +54,18 @@ router = APIRouter(prefix="/api", tags=["Evaluations"])
 # Ensure DB tables exist
 Base.metadata.create_all(bind=engine)
 
-ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg"}
+MEDIA_EXTENSIONS = AUDIO_EXTENSIONS | VIDEO_EXTENSIONS
 
-def validate_audio_file(file: UploadFile):
+def validate_media_file(file: UploadFile):
     ext = Path(file.filename or "").suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
+    if ext not in MEDIA_EXTENSIONS:
         raise HTTPException(
             status_code=415,
-            detail=f"Unsupported file format '{ext}'. Allowed formats: WAV, MP3, M4A, FLAC, OGG."
+            detail=f"Unsupported file format '{ext}'. Allowed formats: Audio (WAV, MP3, M4A, FLAC, OGG, AAC) or Video (MP4, MOV, MKV, WEBM, AVI, M4V)."
         )
+
+def validate_audio_file(file: UploadFile):
+    return validate_media_file(file)
 
 def run_evaluation_pipeline(
     evaluation_id: str,
@@ -214,72 +226,299 @@ def health_check():
     return {"status": "ok", "app": settings.APP_NAME, "tagline": settings.APP_TAGLINE}
 
 
+def run_semantic_evaluation_pipeline(
+    evaluation_id: str,
+    media_raw_path: str,
+    speech_type: Optional[str] = "Auto Detect",
+    user_transcript: Optional[str] = None
+):
+    """Executes the automated semantic speech analysis pipeline asynchronously."""
+    db = SessionLocal()
+    eval_record = None
+    try:
+        eval_record = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+        if not eval_record:
+            return
+
+        eval_record.status = "PROCESSING"
+        eval_record.progress = 10
+        eval_record.current_step = "Extracting audio and preprocessing"
+        db.commit()
+
+        # Step 1: Media Processing (Audio/Video extraction to 16kHz Mono PCM WAV)
+        media_prep = process_input_media(media_raw_path)
+        part_rec = db.query(Recording).filter(Recording.id == eval_record.participant_recording_id).first()
+        if part_rec:
+            part_rec.file_path = media_prep["audio_path"]
+            part_rec.duration = media_prep["duration"]
+            db.commit()
+
+        # Step 2: Automatic Speech Recognition (faster-whisper)
+        eval_record.progress = 25
+        eval_record.current_step = "Transcribing speech and extracting timestamps"
+        db.commit()
+
+        trans_res = transcribe_and_align(
+            media_prep["audio_path"],
+            reference_text=user_transcript if user_transcript and user_transcript.strip() else None,
+            duration=media_prep["duration"]
+        )
+        full_transcript = trans_res.get("text", "").strip() or "Speech recording"
+        words = trans_res.get("words", [])
+
+        speech = eval_record.speech
+        if speech:
+            speech.transcript = full_transcript
+            db.commit()
+
+        # Step 3: Sentence & Phrase Segmentation
+        eval_record.progress = 40
+        eval_record.current_step = "Segmenting sentences and pause intervals"
+        db.commit()
+
+        sentences = segment_transcript_sentences(full_transcript, words, total_duration=media_prep["duration"])
+
+        # Step 4: Semantic Intent Analysis & Expected Delivery Profile Generation
+        eval_record.progress = 55
+        eval_record.current_step = "Analyzing communicative intent and tone expectations"
+        db.commit()
+
+        expected_profiles = []
+        important_words_per_sentence = []
+        for idx, s in enumerate(sentences):
+            intents = classify_sentence_intents(s["text"])
+            role = detect_sentence_role(idx, len(sentences), s["text"], intents)
+            imp_words = extract_important_words_from_sentence(s["text"], s.get("words", []))
+            profile = generate_expected_delivery_profile(s["text"], intents, role)
+            s["intents"] = intents
+            s["role"] = role
+            expected_profiles.append(profile)
+            important_words_per_sentence.append(imp_words)
+
+        # Step 5: Speaker Baseline & Sentence-level Prosodic Feature Extraction
+        eval_record.progress = 70
+        eval_record.current_step = "Extracting vocal prosody and speaker baseline"
+        db.commit()
+
+        global_features = extract_global_audio_features(media_prep["audio_path"])
+        actual_prosodies = []
+        comparisons = []
+        for idx, s in enumerate(sentences):
+            actual_p = extract_sentence_prosody_features(s, global_features, important_words_per_sentence[idx])
+            comp = compare_sentence_expected_vs_actual(expected_profiles[idx], actual_p, s.get("is_question", False))
+            actual_prosodies.append(actual_p)
+            comparisons.append(comp)
+
+        # Step 6: Temporal Flaw Detection Grounded in Semantic Expectations
+        eval_record.progress = 80
+        eval_record.current_step = "Detecting delivery flaws and grounding timestamps"
+        db.commit()
+
+        flaws = detect_semantic_prosodic_flaws(sentences, expected_profiles, actual_prosodies, comparisons, important_words_per_sentence)
+
+        # Step 7: Scoring & Diagnostic Synthesis
+        eval_record.progress = 90
+        eval_record.current_step = "Calculating rubric scores and actionable takeaways"
+        db.commit()
+
+        score_res = calculate_semantic_evaluation_scores(sentences, expected_profiles, actual_prosodies, comparisons, flaws)
+        explanation = generate_speech_explanation_summary(sentences, expected_profiles, actual_prosodies, comparisons, flaws, score_res)
+
+        # Persist Sentences
+        for idx, s in enumerate(sentences):
+            sa = SentenceAnalysis(
+                evaluation_id=eval_record.id,
+                sentence_index=s["id"],
+                text=s["text"],
+                start_time=s["start"],
+                end_time=s["end"],
+                duration=s["duration"],
+                primary_intent=expected_profiles[idx]["primary_intent"],
+                role=expected_profiles[idx]["role"],
+                semantic_labels_json=json.dumps(s["intents"]),
+                expected_delivery_json=json.dumps(expected_profiles[idx]),
+                actual_prosody_json=json.dumps(actual_prosodies[idx]),
+                compatibility_score=comparisons[idx]["compatibility_score"]
+            )
+            db.add(sa)
+
+        # Persist Rubric Scores
+        for item in score_res["rubricDetails"]:
+            rs = RubricScore(
+                evaluation_id=eval_record.id,
+                category=item["category"],
+                score=item["score"],
+                weight=item["weight"],
+                description=item["description"]
+            )
+            db.add(rs)
+
+        # Persist Flaw Segments
+        for f in flaws:
+            flaw_seg = FlawSegment(
+                evaluation_id=eval_record.id,
+                flaw_type=f["type"],
+                start_time=f["start"],
+                end_time=f["end"],
+                duration=f["duration"],
+                severity=f["severity"],
+                transcript_snippet=f.get("transcript", ""),
+                cause=f["cause"],
+                effect=f["effect"],
+                recommendation=f["recommendation"],
+                metrics_json=json.dumps(f.get("metrics", []))
+            )
+            db.add(flaw_seg)
+
+        # Persist Feature Data for Timeline Charts
+        ft = global_features["frame_times"]
+        f0 = global_features["f0_frames"]
+        rms = global_features["rms_frames"]
+        step = max(1, len(ft) // 100)
+        sample_indices = list(range(0, len(ft), step))[:100]
+        t_pts = [round(float(ft[i]), 2) for i in sample_indices]
+        p_pitch = [round(float(f0[i]), 1) if (f0[i] is not None and not np.isnan(f0[i])) else None for i in sample_indices]
+        p_rms = [round(float(rms[i]), 4) for i in sample_indices]
+        p_wpm = []
+        r_pitch = []
+        r_rms = []
+        r_wpm = []
+        base_f0 = global_features["speaker_baseline"]["mean_f0"]
+        base_rms = global_features["speaker_baseline"]["mean_rms"]
+
+        for t in t_pts:
+            matched_s = next((s for s in sentences if s["start"] <= t <= s["end"]), None)
+            if matched_s:
+                m_idx = sentences.index(matched_s)
+                p_wpm.append(matched_s["speech_rate_wpm"])
+                exp_prof = expected_profiles[m_idx]
+                r_pitch.append(base_f0)
+                r_rms.append(base_rms)
+                r_wpm.append(float(exp_prof["pace_wpm"]["ideal"]))
+            else:
+                p_wpm.append(135.0)
+                r_pitch.append(base_f0)
+                r_rms.append(base_rms)
+                r_wpm.append(140.0)
+
+        feature_data = EvaluationFeatures(
+            evaluation_id=eval_record.id,
+            time_points_json=json.dumps(t_pts),
+            reference_features_json=json.dumps({
+                "pitch": r_pitch,
+                "rms": r_rms,
+                "wpm": r_wpm
+            }),
+            participant_features_json=json.dumps({
+                "pitch": p_pitch,
+                "rms": p_rms,
+                "wpm": p_wpm
+            }),
+            deviations_json=json.dumps({
+                "combined": [round(float(abs((p or 0) - (r or 0)) / max(1.0, r or 1.0)), 2) for p, r in zip(p_wpm, r_wpm)]
+            }),
+            alignment_words_json=json.dumps(words)
+        )
+        db.add(feature_data)
+
+        # Update Evaluation Record
+        eval_record.overall_score = score_res["overallScore"]
+        eval_record.similarity = score_res["similarity"]
+        eval_record.confidence = score_res["confidence"]
+        eval_record.detected_speaking_style = score_res["detectedSpeakingStyle"]
+        eval_record.strongest_area = explanation["strongestArea"]
+        eval_record.weakest_area = explanation["weakestArea"]
+        eval_record.summary_text = explanation["summaryText"]
+        eval_record.status = "COMPLETED"
+        eval_record.progress = 100
+        eval_record.current_step = "Analysis complete"
+        eval_record.error_message = None
+        db.commit()
+        logger.info("Semantic evaluation %s completed successfully (Score: %s)", evaluation_id, score_res["overallScore"])
+
+    except Exception as e:
+        logger.exception("Semantic evaluation pipeline failure: %s", e)
+        if eval_record:
+            eval_record.status = "FAILED"
+            eval_record.progress = 100
+            eval_record.current_step = "Analysis failed"
+            eval_record.error_message = str(e)
+            db.commit()
+    finally:
+        db.close()
+
+
 @router.post("/evaluations")
 async def create_evaluation(
     background_tasks: BackgroundTasks,
-    title: str = Form("Speech Evaluation"),
-    transcript: str = Form(...),
-    reference_audio: UploadFile = File(...),
-    participant_audio: UploadFile = File(...),
+    media_file: Optional[UploadFile] = File(None),
+    participant_audio: Optional[UploadFile] = File(None),
+    reference_audio: Optional[UploadFile] = File(None),
+    title: Optional[str] = Form("Speech Evaluation"),
+    speech_type: Optional[str] = Form("Auto Detect"),
+    transcript: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    """Creates a new speech evaluation from uploaded audio files and queues background analysis."""
-    if not transcript.strip():
-        raise HTTPException(status_code=400, detail="Transcript text cannot be empty.")
+    """Creates a new automated speech evaluation from participant audio or video."""
+    upload = media_file or participant_audio
+    if not upload:
+        raise HTTPException(
+            status_code=400,
+            detail="Please upload a participant audio or video file."
+        )
 
-    validate_audio_file(reference_audio)
-    validate_audio_file(participant_audio)
+    validate_media_file(upload)
 
-    # Read content with file size limit check
-    ref_bytes = await reference_audio.read()
-    if len(ref_bytes) > settings.MAX_FILE_SIZE_BYTES:
-        raise HTTPException(status_code=413, detail=f"Reference audio exceeds 50 MB limit.")
+    media_bytes = await upload.read()
+    if len(media_bytes) > settings.MAX_FILE_SIZE_BYTES * 2:
+        raise HTTPException(status_code=413, detail="Media file exceeds 100 MB limit.")
 
-    part_bytes = await participant_audio.read()
-    if len(part_bytes) > settings.MAX_FILE_SIZE_BYTES:
-        raise HTTPException(status_code=413, detail=f"Participant audio exceeds 50 MB limit.")
+    media_id = uuid.uuid4().hex[:12]
+    ext = Path(upload.filename or "speech.wav").suffix.lower()
+    media_raw_path = settings.UPLOAD_DIR / f"media_{media_id}{ext}"
 
-    # Unique collision-safe filenames
-    ref_id = uuid.uuid4().hex[:12]
-    part_id = uuid.uuid4().hex[:12]
-    ref_ext = Path(reference_audio.filename or "audio.wav").suffix.lower()
-    part_ext = Path(participant_audio.filename or "audio.wav").suffix.lower()
+    with open(media_raw_path, "wb") as f:
+        f.write(media_bytes)
 
-    ref_raw_path = settings.UPLOAD_DIR / f"ref_{ref_id}{ref_ext}"
-    part_raw_path = settings.UPLOAD_DIR / f"part_{part_id}{part_ext}"
-
-    with open(ref_raw_path, "wb") as f:
-        f.write(ref_bytes)
-
-    with open(part_raw_path, "wb") as f:
-        f.write(part_bytes)
-
-    speech = Speech(title=title.strip() or "Speech Evaluation", transcript=transcript.strip())
+    speech_title = (title or "").strip() or "Speech Evaluation"
+    speech = Speech(title=speech_title, transcript=(transcript or "").strip())
     db.add(speech)
     db.commit()
     db.refresh(speech)
 
-    rec_ref = Recording(
-        speech_id=speech.id,
-        type="REFERENCE",
-        file_path=str(ref_raw_path),
-        original_filename=reference_audio.filename
-    )
     rec_part = Recording(
         speech_id=speech.id,
         type="PARTICIPANT",
-        file_path=str(part_raw_path),
-        original_filename=participant_audio.filename
+        file_path=str(media_raw_path),
+        original_filename=upload.filename
     )
-    db.add(rec_ref)
     db.add(rec_part)
     db.commit()
-    db.refresh(rec_ref)
     db.refresh(rec_part)
+
+    rec_ref = None
+    if reference_audio:
+        try:
+            ref_bytes = await reference_audio.read()
+            ref_ext = Path(reference_audio.filename or "ref.wav").suffix.lower()
+            ref_raw_path = settings.UPLOAD_DIR / f"ref_{media_id}{ref_ext}"
+            with open(ref_raw_path, "wb") as f:
+                f.write(ref_bytes)
+            rec_ref = Recording(
+                speech_id=speech.id,
+                type="REFERENCE",
+                file_path=str(ref_raw_path),
+                original_filename=reference_audio.filename
+            )
+            db.add(rec_ref)
+            db.commit()
+            db.refresh(rec_ref)
+        except Exception as e:
+            logger.warning("Could not process optional reference audio: %s", e)
 
     evaluation = Evaluation(
         speech_id=speech.id,
-        reference_recording_id=rec_ref.id,
+        reference_recording_id=rec_ref.id if rec_ref else None,
         participant_recording_id=rec_part.id,
         status="QUEUED",
         progress=0,
@@ -289,13 +528,13 @@ async def create_evaluation(
     db.commit()
     db.refresh(evaluation)
 
-    # Queue background analysis
+    # Queue automated semantic evaluation pipeline
     background_tasks.add_task(
-        run_evaluation_pipeline,
+        run_semantic_evaluation_pipeline,
         evaluation.id,
-        str(ref_raw_path),
-        str(part_raw_path),
-        speech.transcript
+        str(media_raw_path),
+        speech_type,
+        transcript
     )
 
     return {
@@ -308,56 +547,33 @@ async def create_evaluation(
 
 @router.post("/evaluations/demo")
 def create_demo_evaluation(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Triggers the built-in prepackaged demo evaluation."""
-    demo_ref_path = settings.DATASET_DIR / "good" / "demo_reference.wav"
+    """Triggers the built-in automated semantic demo evaluation without requiring reference audio."""
     demo_part_path = settings.DATASET_DIR / "flawed" / "demo_participant.wav"
-    demo_labels_path = settings.DATASET_DIR / "labels" / "demo_speech.json"
+    if not demo_part_path.exists():
+        demo_part_path = settings.DATASET_DIR / "good" / "demo_reference.wav"
 
-    if not demo_ref_path.exists() or not demo_part_path.exists():
+    if not demo_part_path.exists():
         raise HTTPException(status_code=404, detail="Demo dataset audio files not found on disk.")
 
     title = "Environmental Leadership Oratory"
-    transcript = """Good morning, members of the jury and respected audience.
-Today, we must confront the defining challenge of our time: protecting our shared global environment.
-We cannot afford hesitation or complacency, because every passing decade reduces our margin for effective action.
-True leadership requires decisive commitment, scientific discipline, and unbroken perseverance.
-Let us choose responsibility today, so that tomorrow remains worthy of our hopes."""
-
-    if demo_labels_path.exists():
-        try:
-            with open(demo_labels_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                title = data.get("title", title)
-                transcript = data.get("transcript", transcript)
-        except Exception:
-            pass
-
-    speech = Speech(title=title, transcript=transcript)
+    speech = Speech(title=title, transcript="")
     db.add(speech)
     db.commit()
     db.refresh(speech)
 
-    rec_ref = Recording(
-        speech_id=speech.id,
-        type="REFERENCE",
-        file_path=str(demo_ref_path),
-        original_filename="demo_reference.wav"
-    )
     rec_part = Recording(
         speech_id=speech.id,
         type="PARTICIPANT",
         file_path=str(demo_part_path),
         original_filename="demo_participant.wav"
     )
-    db.add(rec_ref)
     db.add(rec_part)
     db.commit()
-    db.refresh(rec_ref)
     db.refresh(rec_part)
 
     evaluation = Evaluation(
         speech_id=speech.id,
-        reference_recording_id=rec_ref.id,
+        reference_recording_id=None,
         participant_recording_id=rec_part.id,
         status="QUEUED",
         progress=0,
@@ -368,11 +584,11 @@ Let us choose responsibility today, so that tomorrow remains worthy of our hopes
     db.refresh(evaluation)
 
     background_tasks.add_task(
-        run_evaluation_pipeline,
+        run_semantic_evaluation_pipeline,
         evaluation.id,
-        str(demo_ref_path),
         str(demo_part_path),
-        transcript
+        "Persuasive Oratory",
+        None
     )
 
     return {
@@ -586,13 +802,44 @@ def get_evaluation_results(id: str, db: Session = Depends(get_db)):
             metrics=metrics
         ))
 
+    sentence_items = []
+    for s in (evaluation.sentences or []):
+        try:
+            sem_labels = json.loads(s.semantic_labels_json)
+        except Exception:
+            sem_labels = []
+        try:
+            exp_del = json.loads(s.expected_delivery_json)
+        except Exception:
+            exp_del = {}
+        try:
+            act_pros = json.loads(s.actual_prosody_json)
+        except Exception:
+            act_pros = {}
+        sentence_items.append(SentenceAnalysisItem(
+            id=s.id,
+            sentence_index=s.sentence_index,
+            text=s.text,
+            start_time=s.start_time,
+            end_time=s.end_time,
+            duration=s.duration,
+            primary_intent=s.primary_intent,
+            role=s.role,
+            semantic_labels=sem_labels,
+            expected_delivery=exp_del,
+            actual_prosody=act_pros,
+            compatibility_score=s.compatibility_score
+        ))
+
     summary = EvaluationSummary(
-        overallScore=evaluation.overall_score,
-        similarity=evaluation.similarity,
-        confidence=evaluation.confidence,
+        overallScore=evaluation.overall_score or 0.0,
+        similarity=evaluation.similarity or 0.0,
+        confidence=evaluation.confidence or 0.0,
         totalFlaws=len(flaw_list),
-        strongestArea=evaluation.strongest_area or "Vocal Energy",
-        weakestArea=evaluation.weakest_area or "Pacing"
+        strongestArea=evaluation.strongest_area or "Vocal Energy & Expression",
+        weakestArea=evaluation.weakest_area or "Pacing & Fluency",
+        detectedSpeakingStyle=evaluation.detected_speaking_style or "Persuasive Oratory",
+        summaryText=evaluation.summary_text
     )
 
     # Word alignments
@@ -634,19 +881,22 @@ def get_evaluation_results(id: str, db: Session = Depends(get_db)):
 
     return EvaluationDetailResponse(
         evaluationId=evaluation.id,
-        title=speech.title,
-        transcript=speech.transcript,
+        title=speech.title if speech else "Speech Evaluation",
+        transcript=speech.transcript if speech else "",
         status=evaluation.status,
         error=evaluation.error_message,
         summary=summary,
         rubric=rubric_map,
         rubricDetails=rubric_details,
         flaws=flaw_list,
-        referenceAudioUrl=f"/api/recordings/{ref_rec.id}/audio",
-        participantAudioUrl=f"/api/recordings/{part_rec.id}/audio",
-        referenceDuration=ref_rec.duration,
-        participantDuration=part_rec.duration,
+        referenceAudioUrl=f"/api/recordings/{ref_rec.id}/audio" if ref_rec else None,
+        participantAudioUrl=f"/api/recordings/{part_rec.id}/audio" if part_rec else "",
+        referenceDuration=ref_rec.duration if ref_rec else 0.0,
+        participantDuration=part_rec.duration if part_rec else 0.0,
         alignmentWords=alignment_words,
+        sentences=sentence_items,
+        detectedSpeakingStyle=evaluation.detected_speaking_style or "Persuasive Oratory",
+        summaryText=evaluation.summary_text,
         configAudit=config_audit,
         groundTruthValidation=ground_truth_val
     )
@@ -724,10 +974,23 @@ def get_recording_audio(id: str, request: Request, db: Session = Depends(get_db)
     file_size = os.path.getsize(file_path)
     range_header = request.headers.get("range")
 
+    ext = Path(file_path).suffix.lower()
+    media_type = "audio/wav"
+    if ext == ".mp3":
+        media_type = "audio/mpeg"
+    elif ext == ".mp4":
+        media_type = "video/mp4"
+    elif ext == ".webm":
+        media_type = "video/webm"
+    elif ext == ".ogg":
+        media_type = "audio/ogg"
+    elif ext in (".m4a", ".aac"):
+        media_type = "audio/mp4"
+
     if not range_header:
         return FileResponse(
             file_path,
-            media_type="audio/wav",
+            media_type=media_type,
             headers={"Accept-Ranges": "bytes", "Content-Length": str(file_size)}
         )
 
@@ -760,12 +1023,12 @@ def get_recording_audio(id: str, request: Request, db: Session = Depends(get_db)
                 "Content-Range": f"bytes {start}-{end}/{file_size}",
                 "Accept-Ranges": "bytes",
                 "Content-Length": str(length),
-                "Content-Type": "audio/wav",
+                "Content-Type": media_type,
             }
         )
     except Exception as e:
         logger.warning("Error serving range request for audio: %s", e)
-        return FileResponse(file_path, media_type="audio/wav", headers={"Accept-Ranges": "bytes"})
+        return FileResponse(file_path, media_type=media_type, headers={"Accept-Ranges": "bytes"})
 
 
 @router.get("/dataset", response_model=List[DatasetItemSchema])

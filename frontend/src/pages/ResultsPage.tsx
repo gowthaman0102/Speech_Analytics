@@ -11,6 +11,8 @@ import {
   Activity,
   Layers,
   ChevronRight,
+  MessageSquareQuote,
+  Sparkles,
 } from 'lucide-react';
 import { evaluationApi } from '../api/evaluationApi';
 import type { EvaluationDetail, FeatureTimeSeries, FlawSegment } from '../types';
@@ -21,6 +23,7 @@ import { FlawTimeline } from '../components/FlawTimeline';
 import { FlawCard } from '../components/FlawCard';
 import { RubricCard } from '../components/RubricCard';
 import { TranscriptViewer } from '../components/TranscriptViewer';
+import { SentenceAnalysisView } from '../components/SentenceAnalysisView';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -155,11 +158,19 @@ export const ResultsPage: React.FC = () => {
             <ChevronRight className="w-3 h-3" />
             <span className="font-mono text-[var(--foreground)]">#{evaluation.evaluationId.slice(0, 8)}</span>
           </nav>
-          <h1 className="text-2xl font-serif font-bold text-[var(--foreground)] tracking-tight">
-            {evaluation.title}
-          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl font-serif font-bold text-[var(--foreground)] tracking-tight">
+              {evaluation.title}
+            </h1>
+            {evaluation.detectedSpeakingStyle && (
+              <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[var(--accent)] text-white flex items-center gap-1 shadow-xs">
+                <Sparkles className="w-3 h-3" />
+                <span>{evaluation.detectedSpeakingStyle}</span>
+              </span>
+            )}
+          </div>
           <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-            Temporal contrastive delivery analysis grounded against reference recording.
+            Automated semantic intent & temporal speech delivery analysis.
           </p>
         </div>
 
@@ -316,6 +327,35 @@ export const ResultsPage: React.FC = () => {
         </Card>
       </div>
 
+      {/* Executive Diagnostic Callout */}
+      {evaluation.summaryText && (
+        <Card className="p-5 border-l-4 border-l-[var(--accent)] bg-[var(--surface-2)]">
+          <div className="flex items-start gap-3.5">
+            <MessageSquareQuote className="w-5 h-5 text-[var(--accent)] shrink-0 mt-0.5" />
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)]">
+                  Executive Oratorical Diagnostic
+                </h4>
+                {evaluation.detectedSpeakingStyle && (
+                  <span className="text-[11px] font-mono text-[var(--muted-foreground)]">
+                    Profile: {evaluation.detectedSpeakingStyle}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-[var(--foreground)] leading-relaxed">
+                {evaluation.summaryText}
+              </p>
+              <div className="flex items-center gap-4 text-xs font-mono text-[var(--muted-foreground)] pt-1">
+                <span>Strongest: <strong className="text-emerald-700 dark:text-emerald-400">{summary.strongestArea}</strong></span>
+                <span>•</span>
+                <span>Focus Area: <strong className="text-rose-700 dark:text-rose-400">{summary.weakestArea}</strong></span>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Waveform Player Section */}
       <section aria-label="Waveform comparison">
         <WaveformComparison
@@ -327,6 +367,17 @@ export const ResultsPage: React.FC = () => {
           seekTime={seekTimestamp}
         />
       </section>
+
+      {/* Sentence-Level Semantic Analysis */}
+      {evaluation.sentences && evaluation.sentences.length > 0 && (
+        <section aria-label="Sentence analysis">
+          <SentenceAnalysisView
+            sentences={evaluation.sentences}
+            onSeekTime={(t) => setSeekTimestamp(t)}
+            activeTime={seekTimestamp}
+          />
+        </section>
+      )}
 
       {/* Two-Pane Flaw Explorer */}
       <section aria-label="Flaw inspector" className="space-y-2">

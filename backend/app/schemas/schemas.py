@@ -42,7 +42,21 @@ class FlawSegmentResponse(BaseModel):
     cause: str
     effect: str
     recommendation: str
-    metrics: Dict[str, Any]
+    metrics: Any = {}
+
+class SentenceAnalysisItem(BaseModel):
+    id: Optional[str] = None
+    sentence_index: int
+    text: str
+    start_time: float
+    end_time: float
+    duration: float
+    primary_intent: str
+    role: str
+    semantic_labels: List[Dict[str, Any]] = []
+    expected_delivery: Dict[str, Any] = {}
+    actual_prosody: Dict[str, Any] = {}
+    compatibility_score: float = 100.0
 
 class EvaluationSummary(BaseModel):
     overallScore: float
@@ -51,16 +65,20 @@ class EvaluationSummary(BaseModel):
     totalFlaws: int
     strongestArea: Optional[str] = "Vocal Energy"
     weakestArea: Optional[str] = "Pacing"
+    detectedSpeakingStyle: Optional[str] = "Persuasive Oratory"
+    summaryText: Optional[str] = None
 
 class EvaluationStatusResponse(BaseModel):
     id: str
     status: str
-    progress: int
-    currentStep: str
-    overallScore: float
-    similarity: float
-    confidence: float
+    progress: int = 0
+    currentStep: str = "Queued"
+    current_step: Optional[str] = None
+    overallScore: float = 0.0
+    similarity: float = 0.0
+    confidence: float = 0.0
     error: Optional[str] = None
+    error_message: Optional[str] = None
 
 class EvaluationHistoryItem(BaseModel):
     id: str
@@ -71,8 +89,8 @@ class EvaluationHistoryItem(BaseModel):
     overallScore: float
     similarity: float
     totalFlaws: int
-    referenceDuration: float
-    participantDuration: float
+    referenceDuration: float = 0.0
+    participantDuration: float = 0.0
 
 class EvaluationHistoryResponse(BaseModel):
     items: List[EvaluationHistoryItem]
@@ -125,11 +143,14 @@ class EvaluationDetailResponse(BaseModel):
     rubric: Dict[str, float]
     rubricDetails: List[RubricScoreItem]
     flaws: List[FlawSegmentResponse]
-    referenceAudioUrl: str
+    referenceAudioUrl: Optional[str] = None
     participantAudioUrl: str
-    referenceDuration: float
+    referenceDuration: Optional[float] = 0.0
     participantDuration: float
     alignmentWords: List[Dict[str, Any]] = []
+    sentences: List[SentenceAnalysisItem] = []
+    detectedSpeakingStyle: Optional[str] = "Persuasive Oratory"
+    summaryText: Optional[str] = None
     configAudit: Optional[AuditConfigSchema] = None
     groundTruthValidation: Optional[ValidationResultSchema] = None
 

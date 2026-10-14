@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, FileAudio, X, AlertCircle } from 'lucide-react';
+import { UploadCloud, FileAudio, FileVideo, X, AlertCircle } from 'lucide-react';
 import { Button } from './Button';
 
 export interface DropzoneProps {
@@ -15,9 +15,9 @@ export interface DropzoneProps {
 
 export const Dropzone: React.FC<DropzoneProps> = ({
   label,
-  helperText = 'WAV, MP3, M4A, FLAC, or OGG up to 50 MB',
-  accept = '.wav,.mp3,.m4a,.flac,.ogg,audio/*',
-  maxSizeBytes = 50 * 1024 * 1024,
+  helperText = 'Audio (WAV, MP3, M4A, FLAC) or Video (MP4, MOV, WEBM) up to 100 MB',
+  accept = '.wav,.mp3,.m4a,.flac,.ogg,.aac,.mp4,.mov,.mkv,.webm,audio/*,video/*',
+  maxSizeBytes = 100 * 1024 * 1024,
   file,
   onFileSelect,
   error: propError,
@@ -27,25 +27,35 @@ export const Dropzone: React.FC<DropzoneProps> = ({
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [internalError, setInternalError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
 
   const error = propError || internalError;
+  const isVideo = file ? file.type.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(file.name) : false;
 
   const handleFile = (selectedFile: File) => {
     setInternalError(null);
     if (selectedFile.size > maxSizeBytes) {
-      setInternalError(`File size (${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB) exceeds 50 MB limit.`);
+      setInternalError(`File size (${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB) exceeds 100 MB limit.`);
       return;
     }
 
     const url = URL.createObjectURL(selectedFile);
-    setAudioUrl(url);
+    setMediaUrl(url);
 
-    const tempAudio = new Audio();
-    tempAudio.src = url;
-    tempAudio.onloadedmetadata = () => {
-      setDuration(tempAudio.duration);
-    };
+    const isVid = selectedFile.type.startsWith('video/') || /\.(mp4|mov|mkv|webm|avi|m4v)$/i.test(selectedFile.name);
+    if (isVid) {
+      const tempVid = document.createElement('video');
+      tempVid.src = url;
+      tempVid.onloadedmetadata = () => {
+        setDuration(tempVid.duration);
+      };
+    } else {
+      const tempAudio = new Audio();
+      tempAudio.src = url;
+      tempAudio.onloadedmetadata = () => {
+        setDuration(tempAudio.duration);
+      };
+    }
 
     onFileSelect(selectedFile);
   };
@@ -59,10 +69,10 @@ export const Dropzone: React.FC<DropzoneProps> = ({
   };
 
   const handleRemove = () => {
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
+    if (mediaUrl) {
+      URL.revokeObjectURL(mediaUrl);
     }
-    setAudioUrl(null);
+    setMediaUrl(null);
     setDuration(null);
     setInternalError(null);
     onFileSelect(null);
@@ -119,7 +129,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
             </div>
             <div>
               <p className="text-sm font-medium text-[--text]">
-                Drop audio file here, or <span className="text-[--accent] underline">browse</span>
+                Drop speech audio or video here, or <span className="text-[--accent] underline">browse</span>
               </p>
               <p className="text-xs text-[--text-muted] mt-1">{helperText}</p>
             </div>
@@ -130,10 +140,15 @@ export const Dropzone: React.FC<DropzoneProps> = ({
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="p-2 rounded bg-[--accent-soft] text-[--accent] shrink-0">
-                <FileAudio className="h-5 w-5" />
+                {isVideo ? <FileVideo className="h-5 w-5" /> : <FileAudio className="h-5 w-5" />}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[--text] truncate">{file.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-[--text] truncate">{file.name}</p>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[--surface-2] text-[--text-muted] uppercase">
+                    {isVideo ? 'Video' : 'Audio'}
+                  </span>
+                </div>
                 <p className="text-xs text-[--text-muted] tabular-nums mt-0.5">
                   {formatFileSize(file.size)}
                   {duration !== null && ` • ${formatDuration(duration)}`}
@@ -145,15 +160,19 @@ export const Dropzone: React.FC<DropzoneProps> = ({
               variant="tertiary"
               size="sm"
               onClick={handleRemove}
-              aria-label="Remove audio file"
+              aria-label="Remove media file"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          {audioUrl && (
+          {mediaUrl && (
             <div className="pt-2 border-t border-[--border]">
-              <audio src={audioUrl} controls className="w-full h-8" />
+              {isVideo ? (
+                <video src={mediaUrl} controls className="w-full max-h-48 rounded-[6px] bg-black" />
+              ) : (
+                <audio src={mediaUrl} controls className="w-full h-8" />
+              )}
             </div>
           )}
         </div>

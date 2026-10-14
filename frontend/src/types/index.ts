@@ -39,6 +39,38 @@ export interface FlawSegment {
   explanation?: FlawExplanation;
 }
 
+export interface SentenceAnalysisItem {
+  sentence_index: number;
+  text: string;
+  start_time: number;
+  end_time: number;
+  duration: number;
+  primary_intent: string;
+  role: string;
+  semantic_labels?: Array<{ label: string; score: number }>;
+  expected_delivery?: {
+    pace_wpm?: { min: number; max: number; ideal: number };
+    pitch_variation?: { min: number; max: number; ideal: number };
+    energy?: { min: number; max: number; ideal: number };
+    pause_before?: { min: number; max: number; ideal: number };
+    pause_after?: { min: number; max: number; ideal: number };
+    emphasis_strength?: { min: number; ideal: number };
+    intonation?: string;
+    description?: string;
+  };
+  actual_prosody?: {
+    speech_rate_wpm?: number;
+    pitch_variation?: number;
+    mean_f0_hz?: number;
+    final_pitch_delta_hz?: number;
+    normalized_energy?: number;
+    emphasis_strength?: number;
+    pause_before?: number;
+    pause_after?: number;
+  };
+  compatibility_score: number;
+}
+
 export interface EvaluationSummary {
   overallScore: number;
   similarity: number;
@@ -46,6 +78,8 @@ export interface EvaluationSummary {
   totalFlaws: number;
   strongestArea: string;
   weakestArea: string;
+  detectedSpeakingStyle?: string;
+  summaryText?: string;
 }
 
 export interface EvaluationStatus {
@@ -126,9 +160,9 @@ export interface EvaluationDetail {
   rubricDetails: RubricScoreItem[];
   rubricScores?: RubricScoreItem[];
   flaws: FlawSegment[];
-  referenceAudioUrl: string;
+  referenceAudioUrl?: string | null;
   participantAudioUrl: string;
-  referenceDuration: number;
+  referenceDuration?: number;
   participantDuration: number;
   alignmentWords?: Array<{
     word: string;
@@ -137,6 +171,9 @@ export interface EvaluationDetail {
     part_start: number;
     part_end: number;
   }>;
+  sentences?: SentenceAnalysisItem[];
+  detectedSpeakingStyle?: string;
+  summaryText?: string;
   configAudit?: AuditConfig;
   groundTruthValidation?: ValidationResult;
 }

@@ -24,7 +24,7 @@ class Recording(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     speech_id = Column(String(36), ForeignKey("speeches.id"), nullable=False)
-    type = Column(String(20), nullable=False)  # "REFERENCE" or "PARTICIPANT"
+    type = Column(String(20), nullable=False)  # "PARTICIPANT" or "REFERENCE"
     file_path = Column(String(500), nullable=False)
     original_filename = Column(String(255), nullable=True)
     duration = Column(Float, nullable=False, default=0.0)
@@ -40,7 +40,7 @@ class Evaluation(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     speech_id = Column(String(36), ForeignKey("speeches.id"), nullable=False)
-    reference_recording_id = Column(String(36), ForeignKey("recordings.id"), nullable=False)
+    reference_recording_id = Column(String(36), ForeignKey("recordings.id"), nullable=True)
     participant_recording_id = Column(String(36), ForeignKey("recordings.id"), nullable=False)
     
     overall_score = Column(Float, default=0.0)
@@ -53,6 +53,8 @@ class Evaluation(Base):
     
     strongest_area = Column(String(100), nullable=True)
     weakest_area = Column(String(100), nullable=True)
+    detected_speaking_style = Column(String(100), nullable=True)
+    summary_text = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     speech = relationship("Speech", back_populates="evaluations")
@@ -62,6 +64,28 @@ class Evaluation(Base):
     rubric_scores = relationship("RubricScore", back_populates="evaluation", cascade="all, delete-orphan")
     flaw_segments = relationship("FlawSegment", back_populates="evaluation", cascade="all, delete-orphan")
     features = relationship("EvaluationFeatures", back_populates="evaluation", uselist=False, cascade="all, delete-orphan")
+    sentences = relationship("SentenceAnalysis", back_populates="evaluation", cascade="all, delete-orphan")
+
+
+class SentenceAnalysis(Base):
+    __tablename__ = "sentence_analyses"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    evaluation_id = Column(String(36), ForeignKey("evaluations.id"), nullable=False)
+    sentence_index = Column(Integer, nullable=False)
+    text = Column(Text, nullable=False)
+    start_time = Column(Float, nullable=False)
+    end_time = Column(Float, nullable=False)
+    duration = Column(Float, nullable=False)
+    
+    primary_intent = Column(String(50), nullable=False)
+    role = Column(String(50), nullable=False)
+    semantic_labels_json = Column(Text, nullable=False)
+    expected_delivery_json = Column(Text, nullable=False)
+    actual_prosody_json = Column(Text, nullable=False)
+    compatibility_score = Column(Float, default=100.0)
+
+    evaluation = relationship("Evaluation", back_populates="sentences")
 
 
 class RubricScore(Base):
@@ -91,7 +115,7 @@ class FlawSegment(Base):
     cause = Column(Text, nullable=False)
     effect = Column(Text, nullable=False)
     recommendation = Column(Text, nullable=False)
-    metrics_json = Column(Text, nullable=False)  # JSON-encoded dict of exact numbers
+    metrics_json = Column(Text, nullable=False)
 
     evaluation = relationship("Evaluation", back_populates="flaw_segments")
 

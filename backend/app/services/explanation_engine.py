@@ -1,3 +1,87 @@
+import logging
+from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
+
+def generate_speech_explanation_summary(
+    sentences: List[Dict[str, Any]],
+    expected_profiles: List[Dict[str, Any]],
+    actual_prosodies: List[Dict[str, Any]],
+    comparisons: List[Dict[str, Any]],
+    flaws: List[Dict[str, Any]],
+    scores: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Synthesizes overall explainable feedback and diagnostic takeaways for the entire speech.
+    """
+    rubric = scores["rubric"]
+    # Identify strongest and weakest rubric dimensions
+    sorted_rubric = sorted(rubric.items(), key=lambda x: x[1], reverse=True)
+    strongest_dim = sorted_rubric[0][0]
+    weakest_dim = sorted_rubric[-1][0]
+
+    overall_score = scores["overallScore"]
+    style = scores["detectedSpeakingStyle"]
+
+    if overall_score >= 85:
+        summary_text = (
+            f"Exceptional delivery ({overall_score}/100) aligned with {style}. Your vocal pacing, "
+            f"emphasis, and intonation closely supported the communicative intent of your sentences."
+        )
+    elif overall_score >= 70:
+        summary_text = (
+            f"Solid performance ({overall_score}/100) with strong {strongest_dim.lower()}. "
+            f"Focus on improving {weakest_dim.lower()} to ensure your vocal delivery consistently reflects sentence meaning."
+        )
+    elif overall_score >= 55:
+        summary_text = (
+            f"Developing delivery ({overall_score}/100). While your {strongest_dim.lower()} showed promise, "
+            f"deviations in {weakest_dim.lower()} diminished the communicative force of your message."
+        )
+    else:
+        summary_text = (
+            f"Needs practice ({overall_score}/100). Several key passages exhibited tone-semantic mismatch, "
+            f"fading energy, or flat pitch contours that failed to communicate the underlying message."
+        )
+
+    # Compile structured sentence diagnostic records
+    sentence_diagnostics = []
+    for idx, s in enumerate(sentences):
+        exp = expected_profiles[idx]
+        act = actual_prosodies[idx]
+        comp = comparisons[idx]
+
+        sentence_diagnostics.append({
+            "id": s["id"],
+            "text": s["text"],
+            "start": s["start"],
+            "end": s["end"],
+            "duration": s["duration"],
+            "semantic_intent": exp["primary_intent"],
+            "role": exp["role"],
+            "expected_delivery": {
+                "pace_range": f"{exp['pace_wpm']['min']}–{exp['pace_wpm']['max']} WPM",
+                "pitch_variation": f"{exp['pitch_variation']['min']:.2f}–{exp['pitch_variation']['max']:.2f}",
+                "energy_target": f"{exp['energy']['ideal']:.2f}",
+                "intonation": exp["intonation"]
+            },
+            "actual_delivery": {
+                "pace": f"{act['speech_rate_wpm']} WPM",
+                "pitch_variation": f"{act['pitch_variation']:.2f}",
+                "energy": f"{act['normalized_energy']:.2f}",
+                "emphasis": f"{act['emphasis_strength']:.2f}"
+            },
+            "compatibility_score": comp["compatibility_score"]
+        })
+
+    return {
+        "summaryText": summary_text,
+        "strongestArea": strongest_dim,
+        "weakestArea": weakest_dim,
+        "sentenceDiagnostics": sentence_diagnostics
+    }
+
+
 from typing import Dict, Any, List
 
 def generate_causal_explanation(flaw: Dict[str, Any]) -> Dict[str, str]:
@@ -28,7 +112,7 @@ def generate_causal_explanation(flaw: Dict[str, Any]) -> Dict[str, str]:
         simple_feedback = f"You rushed this section. Try slowing down on '{snippet}'."
         cause = f"Participant cadence accelerated to {part_wpm} WPM compared to baseline {ref_wpm} WPM ({diff_pct:+.1f}% deviation)."
         effect = "Syllable duration compression removes necessary rhetorical spacing, reducing audience retention."
-        recommendation = f"Slow your delivery on '{snippet}'. Insert a clean 300–400 ms breath pause after key nouns."
+        recommendation = f"Slow your delivery on '{snippet}'. Insert a clean 300â€“400 ms breath pause after key nouns."
         why_flagged = (
             f"Measurement: Speaking Rate (WPM)\n"
             f"Reference: {ref_wpm} WPM\n"

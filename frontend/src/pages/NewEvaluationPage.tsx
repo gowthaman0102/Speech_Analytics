@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, FileText, ArrowRight, RotateCcw } from 'lucide-react';
+import { FileText, Sparkles, ChevronDown, ChevronUp, Mic, Video, PlayCircle } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { Dropzone } from '../components/ui/Dropzone';
@@ -8,22 +8,30 @@ import { Button } from '../components/ui/Button';
 import { Banner } from '../components/ui/Banner';
 import { evaluationApi, getErrorMessage } from '../api/evaluationApi';
 
+const SPEECH_CATEGORIES = [
+  'Auto Detect',
+  'Persuasive Oratory',
+  'Debate & Policy Argument',
+  'Motivational Keynote',
+  'Interpretive Reading / Dramatic',
+  'Extemporaneous Speaking',
+  'Declamation',
+];
+
 export const NewEvaluationPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [title, setTitle] = useState<string>('');
+  const [speechType, setSpeechType] = useState<string>('Auto Detect');
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [transcript, setTranscript] = useState<string>('');
-  const [referenceFile, setReferenceFile] = useState<File | null>(null);
-  const [participantFile, setParticipantFile] = useState<File | null>(null);
+  const [showTranscriptOption, setShowTranscriptOption] = useState<boolean>(false);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Client validation
-  const isValid =
-    transcript.trim().length > 10 &&
-    referenceFile !== null &&
-    participantFile !== null;
+  // Client validation: only the media file is required!
+  const isValid = mediaFile !== null;
 
   const handleImportTxt = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,16 +61,17 @@ export const NewEvaluationPage: React.FC = () => {
 
   const handleReset = () => {
     setTitle('');
+    setSpeechType('Auto Detect');
+    setMediaFile(null);
     setTranscript('');
-    setReferenceFile(null);
-    setParticipantFile(null);
+    setShowTranscriptOption(false);
     setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid || !referenceFile || !participantFile) {
-      setError('Please provide the speech transcript, reference recording, and participant recording.');
+    if (!mediaFile) {
+      setError('Please provide a speech recording (audio or video) to evaluate.');
       return;
     }
 
@@ -72,9 +81,11 @@ export const NewEvaluationPage: React.FC = () => {
 
       const formData = new FormData();
       formData.append('title', title.trim() || 'Speech Evaluation');
-      formData.append('transcript', transcript.trim());
-      formData.append('reference_audio', referenceFile);
-      formData.append('participant_audio', participantFile);
+      formData.append('speech_type', speechType);
+      formData.append('media_file', mediaFile);
+      if (transcript.trim()) {
+        formData.append('transcript', transcript.trim());
+      }
 
       const res = await evaluationApi.createEvaluation(formData);
       navigate(`/processing/${res.evaluationId}`);
@@ -86,13 +97,27 @@ export const NewEvaluationPage: React.FC = () => {
 
   return (
     <div className="max-w-[720px] mx-auto px-6 py-12 space-y-8 text-left">
-      <div>
-        <h1 className="text-2xl font-semibold text-[--text] tracking-tight">
-          New evaluation
-        </h1>
-        <p className="text-sm text-[--text-muted] mt-1">
-          Upload the canonical transcript and matching audio recordings to run contrastive speech analysis.
-        </p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-[--text] tracking-tight">
+            New Speech Evaluation
+          </h1>
+          <p className="text-sm text-[--text-muted] mt-1">
+            Upload participant audio or video. SpeechScope automatically transcribes speech, analyzes communicative intent, and detects grounded delivery flaws.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={loading}
+          onClick={handleUseSampleData}
+          className="shrink-0 self-start md:self-auto gap-1.5 border-[--accent] text-[--accent]"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>Try 1-Click Sample Speech</span>
+        </Button>
       </div>
 
       {error && (
@@ -102,62 +127,111 @@ export const NewEvaluationPage: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8 divide-y divide-[--border]">
-        {/* Section 1: Details */}
+        {/* Section 1: Details & Category */}
         <div className="space-y-4 pt-1 first:pt-0">
-          <Input
-            label="Evaluation title"
-            placeholder="e.g. Persuasive Oratory Preliminary Round"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            helperText="An optional descriptive label for this evaluation run."
-          />
-        </div>
-
-        {/* Section 2: Transcript */}
-        <div className="space-y-3 pt-6">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-[--text]">Canonical transcript</span>
-            <label className="text-xs text-[--accent] hover:text-[--accent-hover] font-medium cursor-pointer inline-flex items-center gap-1">
-              <FileText className="h-3.5 w-3.5" />
-              <span>Import .txt</span>
-              <input type="file" accept=".txt" className="hidden" onChange={handleImportTxt} />
-            </label>
-          </div>
-
-          <Textarea
-            rows={8}
-            placeholder="Paste the exact spoken words of the speech transcript here…"
-            value={transcript}
-            onChange={(e) => setTranscript(e.target.value)}
-            showWordCount={true}
-            helperText="Paste the exact words. Timing differences between the speaker and this transcript will be evaluated."
-          />
-        </div>
-
-        {/* Section 3: Audio Recordings */}
-        <div className="space-y-6 pt-6">
-          <div>
-            <h2 className="text-sm font-semibold text-[--text]">Audio recordings</h2>
-            <p className="text-xs text-[--text-muted] mt-0.5">
-              Both recordings must speak the transcript above. Max file size: 50 MB each.
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Dropzone
-              label="1. Reference audio (Baseline standard)"
-              helperText="The ideal or benchmark reading"
-              file={referenceFile}
-              onFileSelect={setReferenceFile}
+            <Input
+              label="Speech title"
+              placeholder="e.g. Environmental Leadership Oratory"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              helperText="Optional descriptive title."
             />
 
-            <Dropzone
-              label="2. Participant audio (Delivery to evaluate)"
-              helperText="The student or speaker's recording"
-              file={participantFile}
-              onFileSelect={setParticipantFile}
-            />
+            <div className="space-y-1.5 text-left">
+              <label className="block text-sm font-medium text-[--text]">
+                Oratorical category
+              </label>
+              <select
+                value={speechType}
+                onChange={(e) => setSpeechType(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-[--surface] border border-[--border-strong] rounded-[6px] text-[--text] focus:outline-none focus:ring-2 focus:ring-[--accent] focus:border-transparent transition-all"
+              >
+                {SPEECH_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-[--text-muted]">
+                Calibrates tone and prosodic range expectations.
+              </p>
+            </div>
           </div>
+        </div>
+
+        {/* Section 2: Media Upload */}
+        <div className="space-y-4 pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-[--text] flex items-center gap-1.5">
+                <Mic className="h-4 w-4 text-[--accent]" />
+                <span>Participant speech recording</span>
+              </h2>
+              <p className="text-xs text-[--text-muted] mt-0.5">
+                Upload audio or video. Audio track is automatically extracted at 16 kHz mono PCM.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-[--text-muted]">
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[--surface-2]">
+                <Mic className="h-3 w-3" /> Audio
+              </span>
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[--surface-2]">
+                <Video className="h-3 w-3" /> Video
+              </span>
+            </div>
+          </div>
+
+          <Dropzone
+            label=""
+            helperText="Audio (.wav, .mp3, .m4a, .flac) or Video (.mp4, .mov, .webm) up to 100 MB"
+            accept=".wav,.mp3,.m4a,.flac,.ogg,.aac,.mp4,.mov,.mkv,.webm,audio/*,video/*"
+            maxSizeBytes={100 * 1024 * 1024}
+            file={mediaFile}
+            onFileSelect={setMediaFile}
+          />
+        </div>
+
+        {/* Section 3: Optional Transcript */}
+        <div className="pt-6 space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowTranscriptOption(!showTranscriptOption)}
+            className="flex items-center justify-between w-full text-left py-1 text-sm font-medium text-[--text] hover:text-[--accent] transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-[--text-muted]" />
+              <span>Have a prepared reference transcript? (Optional)</span>
+            </span>
+            {showTranscriptOption ? (
+              <ChevronUp className="h-4 w-4 text-[--text-muted]" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-[--text-muted]" />
+            )}
+          </button>
+
+          {showTranscriptOption && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-[--text-muted]">
+                  Leave blank to allow automatic Whisper transcription. If provided, alignment will check verbatim accuracy.
+                </p>
+                <label className="text-xs text-[--accent] hover:text-[--accent-hover] font-medium cursor-pointer inline-flex items-center gap-1">
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Import .txt</span>
+                  <input type="file" accept=".txt" className="hidden" onChange={handleImportTxt} />
+                </label>
+              </div>
+
+              <Textarea
+                rows={6}
+                placeholder="Optional: Paste the prepared transcript text here…"
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                showWordCount={true}
+              />
+            </div>
+          )}
         </div>
 
         {/* Section 4: Action Bar */}
@@ -170,7 +244,7 @@ export const NewEvaluationPage: React.FC = () => {
               loading={loading}
               disabled={!isValid}
             >
-              {loading ? 'Analyzing…' : 'Run evaluation'}
+              {loading ? 'Starting Analysis…' : 'Analyze Speech Delivery'}
             </Button>
 
             <Button
@@ -180,7 +254,7 @@ export const NewEvaluationPage: React.FC = () => {
               disabled={loading}
               onClick={handleUseSampleData}
             >
-              Use sample data
+              Load sample speech
             </Button>
           </div>
 
@@ -191,7 +265,7 @@ export const NewEvaluationPage: React.FC = () => {
             disabled={loading}
             onClick={handleReset}
           >
-            Reset form
+            Reset
           </Button>
         </div>
       </form>

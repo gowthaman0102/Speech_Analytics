@@ -8,12 +8,13 @@ interface Stage {
 }
 
 const STAGES: Stage[] = [
-  { key: 'validate', label: 'Audio validation', description: 'Checking sampling rate, channels, and duration' },
-  { key: 'transcribe', label: 'Speech recognition', description: 'Aligning phoneme and word tokens' },
-  { key: 'features', label: 'Feature extraction', description: 'Computing pitch (F0), loudness (RMS), and spectral features' },
-  { key: 'align', label: 'Temporal alignment', description: 'Dynamic time warping on acoustic trajectories' },
-  { key: 'flaws', label: 'Contrastive flaw detection', description: 'Isolating tempo, volume, pause, and intonation deviations' },
-  { key: 'rubric', label: 'Scoring & recommendations', description: 'Calculating rubric dimensions and actionable guidance' },
+  { key: 'media', label: '1. Media Preprocessing & Extraction', description: 'Transcoding input video/audio to 16 kHz Mono PCM WAV' },
+  { key: 'asr', label: '2. Automatic Speech Recognition', description: 'Faster-Whisper transcribing speech and word-level timestamps' },
+  { key: 'segment', label: '3. Sentence & Phrase Segmentation', description: 'Partitioning speech into rhetorical sentences and pause bounds' },
+  { key: 'semantic', label: '4. Semantic Intent & Expectations', description: 'Dense embeddings modeling communicative intent and delivery profiles' },
+  { key: 'prosody', label: '5. Prosody & Speaker Baseline', description: 'Extracting continuous F0 pitch, RMS energy, and z-score normalization' },
+  { key: 'flaws', label: '6. Temporal Flaw Detection', description: 'Grounding mismatches, monotone delivery, and rhetorical pacing' },
+  { key: 'scoring', label: '7. Rubric Scoring & Takeaways', description: 'Deterministic 6-dimension scoring and actionable recommendations' },
 ];
 
 interface ProcessingStepperProps {
@@ -30,11 +31,12 @@ export const ProcessingStepper: React.FC<ProcessingStepperProps> = ({
   // Map progress to active stage index
   const getStageIndex = (pct: number) => {
     if (pct < 20) return 0;
-    if (pct < 40) return 1;
-    if (pct < 65) return 2;
-    if (pct < 75) return 3;
-    if (pct < 85) return 4;
-    return 5;
+    if (pct < 35) return 1;
+    if (pct < 50) return 2;
+    if (pct < 65) return 3;
+    if (pct < 78) return 4;
+    if (pct < 88) return 5;
+    return 6;
   };
 
   const activeIndex = status === 'COMPLETED' ? STAGES.length : getStageIndex(progress);

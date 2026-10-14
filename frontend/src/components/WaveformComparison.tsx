@@ -6,7 +6,7 @@ import { Button } from './ui/Button';
 import type { FlawSegment } from '../types';
 
 interface WaveformComparisonProps {
-  referenceAudioUrl: string;
+  referenceAudioUrl?: string | null;
   participantAudioUrl: string;
   flaws: FlawSegment[];
   selectedFlawId?: string;
@@ -37,7 +37,7 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
 
   // Initialize Reference WaveSurfer
   useEffect(() => {
-    if (!refContainerRef.current) return;
+    if (!refContainerRef.current || !referenceAudioUrl) return;
 
     const wsRef = WaveSurfer.create({
       container: refContainerRef.current,
@@ -200,71 +200,75 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
           </p>
         </div>
 
-        {/* Track selector */}
-        <div className="flex items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-0.5 text-xs">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTrack('participant');
-              if (refWaveSurfer.current) refWaveSurfer.current.pause();
-            }}
-            className={`px-3 py-1 rounded transition-colors ${
-              activeTrack === 'participant'
-                ? 'bg-[var(--surface)] text-[var(--series-participant)] font-medium shadow-xs'
-                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-            }`}
-          >
-            Participant
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTrack('reference');
-              if (partWaveSurfer.current) partWaveSurfer.current.pause();
-            }}
-            className={`px-3 py-1 rounded transition-colors ${
-              activeTrack === 'reference'
-                ? 'bg-[var(--surface)] text-[var(--series-ref)] font-medium shadow-xs'
-                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-            }`}
-          >
-            Reference
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTrack('both');
-            }}
-            className={`px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
-              activeTrack === 'both'
-                ? 'bg-[var(--surface)] text-[var(--foreground)] font-medium shadow-xs'
-                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-            }`}
-            title="Lock Playheads: Play both tracks simultaneously"
-          >
-            {activeTrack === 'both' ? <Lock className="w-3 h-3 text-[var(--accent)]" /> : <Unlock className="w-3 h-3" />}
-            <span>Lock</span>
-          </button>
-        </div>
+        {/* Track selector (only when reference audio exists) */}
+        {referenceAudioUrl && (
+          <div className="flex items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTrack('participant');
+                if (refWaveSurfer.current) refWaveSurfer.current.pause();
+              }}
+              className={`px-3 py-1 rounded transition-colors ${
+                activeTrack === 'participant'
+                  ? 'bg-[var(--surface)] text-[var(--series-participant)] font-medium shadow-xs'
+                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+              }`}
+            >
+              Participant
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTrack('reference');
+                if (partWaveSurfer.current) partWaveSurfer.current.pause();
+              }}
+              className={`px-3 py-1 rounded transition-colors ${
+                activeTrack === 'reference'
+                  ? 'bg-[var(--surface)] text-[var(--series-ref)] font-medium shadow-xs'
+                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+              }`}
+            >
+              Reference
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTrack('both');
+              }}
+              className={`px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
+                activeTrack === 'both'
+                  ? 'bg-[var(--surface)] text-[var(--foreground)] font-medium shadow-xs'
+                  : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+              }`}
+              title="Lock Playheads: Play both tracks simultaneously"
+            >
+              {activeTrack === 'both' ? <Lock className="w-3 h-3 text-[var(--accent)]" /> : <Unlock className="w-3 h-3" />}
+              <span>Lock</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Waveform Displays */}
       <div className="space-y-4">
-        {/* Reference Waveform */}
-        <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#1F4E79]" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#1F4E79]">
-                Reference Delivery
-              </span>
+        {/* Reference Waveform (only when reference audio exists) */}
+        {referenceAudioUrl && (
+          <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#1F4E79]" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#1F4E79]">
+                  Reference Delivery
+                </span>
+              </div>
+              <span className="text-xs text-[var(--muted-foreground)]">Baseline Archetype</span>
             </div>
-            <span className="text-xs text-[var(--muted-foreground)]">Baseline Archetype</span>
+            <div className="rounded bg-[var(--surface-2)] p-2">
+              <div ref={refContainerRef} className="cursor-pointer" />
+            </div>
           </div>
-          <div className="rounded bg-[var(--surface-2)] p-2">
-            <div ref={refContainerRef} className="cursor-pointer" />
-          </div>
-        </div>
+        )}
 
         {/* Participant Waveform with Flaws Overlay */}
         <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">

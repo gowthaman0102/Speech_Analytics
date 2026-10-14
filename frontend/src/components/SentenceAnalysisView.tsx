@@ -120,7 +120,7 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                 {/* Left: Timing & Intent Badges */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)]">
-                    #{idx + 1} • {item.start_time.toFixed(1)}s – {item.end_time.toFixed(1)}s
+                    #{item.sentence_index ?? idx + 1} • {(item.start_time ?? 0).toFixed(1)}s – {(item.end_time ?? 0).toFixed(1)}s
                   </span>
                   <span
                     className={`text-[11px] font-medium px-2 py-0.5 rounded border capitalize ${badge.className}`}
@@ -151,7 +151,7 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                     className="p-1 h-7 w-7 text-[var(--muted-foreground)] hover:text-[var(--accent)]"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSeekTime(item.start_time);
+                      onSeekTime(item.start_time ?? 0);
                     }}
                     title="Play sentence audio"
                   >
@@ -187,10 +187,10 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                   <span className="text-[10px] text-[var(--muted-foreground)] block">Pitch Modulation</span>
                   <div className="mt-0.5 flex items-baseline justify-between">
                     <span className="font-semibold text-[var(--foreground)]">
-                      {act?.pitch_variation ? act.pitch_variation.toFixed(3) : '—'}
+                      {typeof act?.pitch_variation === 'number' ? act.pitch_variation.toFixed(3) : '—'}
                     </span>
                     <span className="text-[10px] text-[var(--muted-foreground)]">
-                      {exp?.pitch_variation ? `Target: ${exp.pitch_variation.ideal.toFixed(2)}` : ''}
+                      {typeof exp?.pitch_variation?.ideal === 'number' ? `Target: ${exp.pitch_variation.ideal.toFixed(2)}` : ''}
                     </span>
                   </div>
                 </div>
@@ -200,10 +200,10 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                   <span className="text-[10px] text-[var(--muted-foreground)] block">Vocal Energy</span>
                   <div className="mt-0.5 flex items-baseline justify-between">
                     <span className="font-semibold text-[var(--foreground)]">
-                      {act?.normalized_energy ? act.normalized_energy.toFixed(2) : '—'}
+                      {typeof act?.normalized_energy === 'number' ? act.normalized_energy.toFixed(2) : '—'}
                     </span>
                     <span className="text-[10px] text-[var(--muted-foreground)]">
-                      {exp?.energy ? `Target: ${exp.energy.ideal.toFixed(2)}` : ''}
+                      {typeof exp?.energy?.ideal === 'number' ? `Target: ${exp.energy.ideal.toFixed(2)}` : ''}
                     </span>
                   </div>
                 </div>
@@ -215,7 +215,7 @@ export const SentenceAnalysisView: React.FC<SentenceAnalysisViewProps> = ({
                     <span className="font-semibold text-[var(--foreground)]">
                       {exp?.intonation || 'MODULATED'}
                     </span>
-                    {act?.final_pitch_delta_hz !== undefined && (
+                    {typeof act?.final_pitch_delta_hz === 'number' && (
                       <span className="text-[10px] text-[var(--muted-foreground)]">
                         {act.final_pitch_delta_hz >= 0 ? '+' : ''}
                         {act.final_pitch_delta_hz.toFixed(1)} Hz

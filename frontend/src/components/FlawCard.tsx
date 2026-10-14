@@ -15,10 +15,11 @@ interface FlawCardProps {
 export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => {
   const [showMeasurements, setShowMeasurements] = useState<boolean>(false);
 
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remSecs = Math.floor(secs % 60);
-    const ms = Math.floor((secs % 1) * 10);
+  const formatTime = (secs: number = 0) => {
+    const s = Number(secs) || 0;
+    const mins = Math.floor(s / 60);
+    const remSecs = Math.floor(s % 60);
+    const ms = Math.floor((s % 1) * 10);
     return `${mins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}.${ms}`;
   };
 
@@ -37,12 +38,13 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
   const formattedTitle = title.charAt(0).toUpperCase() + title.slice(1);
 
   const explanation = flaw.explanation;
-  const metrics: FlawMetricDetail[] = explanation?.metrics ?? [];
+  const metrics: any[] = explanation?.metrics ?? (Array.isArray(flaw.metrics) ? flaw.metrics : []);
 
   const cause = explanation?.cause || flaw.cause;
   const effect = explanation?.effect || flaw.effect;
   const recommendation = explanation?.recommendation || flaw.recommendation;
   const summary = explanation?.summary || 'The delivery exhibited measurable divergence from the baseline standard.';
+  const flawDuration = flaw.duration ?? (flaw.end !== undefined && flaw.start !== undefined ? flaw.end - flaw.start : 0);
 
   return (
     <Card className="p-6">
@@ -51,7 +53,7 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)]">
-              {formatTime(flaw.start)} – {formatTime(flaw.end)} ({flaw.duration.toFixed(1)}s)
+              {formatTime(flaw.start)} – {formatTime(flaw.end)} ({(flawDuration ?? 0).toFixed(1)}s)
             </span>
             {getSeverityBadge(flaw.severity)}
           </div>
@@ -154,21 +156,26 @@ export const FlawCard: React.FC<FlawCardProps> = ({ flaw, onPlayTimestamp }) => 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {metrics.map((m: FlawMetricDetail, idx: number) => {
-                  const sign = m.delta_pct > 0 ? '+' : '';
-                  const isFlagged = m.threshold_pct ? Math.abs(m.delta_pct) >= m.threshold_pct : true;
+                {metrics.map((m: any, idx: number) => {
+                  const metricName = m.name ?? m.featureName ?? 'Acoustic Metric';
+                  const refVal = m.reference_val ?? m.referenceValue;
+                  const partVal = m.participant_val ?? m.participantValue;
+                  const deltaPct = m.delta_pct ?? m.differencePercent ?? 0;
+                  const unit = m.unit ?? '';
+                  const sign = typeof deltaPct === 'number' && deltaPct > 0 ? '+' : '';
+                  const isFlagged = m.threshold_pct ? Math.abs(deltaPct) >= m.threshold_pct : true;
 
                   return (
                     <TableRow key={idx}>
-                      <TableCell className="font-medium text-[var(--foreground)]">{m.name}</TableCell>
+                      <TableCell className="font-medium text-[var(--foreground)]">{metricName}</TableCell>
                       <TableCell className="font-mono text-xs text-[var(--muted-foreground)]">
-                        {m.reference_val.toFixed(1)} {m.unit}
+                        {typeof refVal === 'number' ? `${refVal.toFixed(1)} ${unit}` : refVal !== undefined ? `${refVal} ${unit}` : '—'}
                       </TableCell>
                       <TableCell className="font-mono text-xs font-semibold text-[var(--foreground)]">
-                        {m.participant_val.toFixed(1)} {m.unit}
+                        {typeof partVal === 'number' ? `${partVal.toFixed(1)} ${unit}` : partVal !== undefined ? `${partVal} ${unit}` : '—'}
                       </TableCell>
                       <TableCell className="font-mono text-xs font-semibold text-[var(--series-participant)]">
-                        {sign}{m.delta_pct.toFixed(1)}%
+                        {typeof deltaPct === 'number' ? `${sign}${deltaPct.toFixed(1)}%` : deltaPct}
                       </TableCell>
                       <TableCell>
                         <span

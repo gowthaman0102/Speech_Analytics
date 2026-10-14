@@ -6,13 +6,7 @@ import type { FlawSegment } from '../types';
 interface TranscriptViewerProps {
   transcript: string;
   flaws: FlawSegment[];
-  alignmentWords?: Array<{
-    word: string;
-    ref_start: number;
-    ref_end: number;
-    part_start: number;
-    part_end: number;
-  }>;
+  alignmentWords?: Array<any>;
   onSelectFlaw?: (flaw: FlawSegment) => void;
   onSeekTime?: (time: number) => void;
   selectedFlawId?: string;
@@ -28,10 +22,12 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
 }) => {
   const sentences = transcript.split('\n').filter((s) => s.trim().length > 0);
 
-  const handleWordClick = (wordObj: { word: string; part_start: number; part_end: number }) => {
-    onSeekTime?.(wordObj.part_start);
+  const handleWordClick = (wordObj: any) => {
+    const start = wordObj.part_start ?? wordObj.start ?? 0;
+    const end = wordObj.part_end ?? wordObj.end ?? 0;
+    onSeekTime?.(start);
     const matchedFlaw = flaws.find(
-      (f) => wordObj.part_start <= f.end && wordObj.part_end >= f.start
+      (f) => start <= f.end && end >= f.start
     );
     if (matchedFlaw) {
       onSelectFlaw?.(matchedFlaw);
@@ -68,9 +64,12 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
 
       {alignmentWords && alignmentWords.length > 0 ? (
         <div className="p-6 bg-[var(--surface-2)] rounded-md border border-[var(--border)] flex flex-wrap gap-x-1.5 gap-y-2 text-[17px] font-serif text-[var(--foreground)] leading-loose">
-          {alignmentWords.map((w, idx) => {
+          {alignmentWords.map((w: any, idx: number) => {
+            const wordText = w.word ?? w.text ?? '';
+            const start = w.part_start ?? w.start ?? 0;
+            const end = w.part_end ?? w.end ?? 0;
             const overlappingFlaw = flaws.find(
-              (f) => w.part_start <= f.end && w.part_end >= f.start
+              (f) => start <= f.end && end >= f.start
             );
             const isSelected = overlappingFlaw && selectedFlawId === overlappingFlaw.id;
 
@@ -90,7 +89,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
                 key={idx}
                 onClick={() => handleWordClick(w)}
                 className={`px-0.5 pb-0.5 cursor-pointer transition-colors ${underlineClass}`}
-                title={`${w.word} (${w.part_start.toFixed(2)}s – ${w.part_end.toFixed(2)}s)${
+                title={`${wordText} (${start.toFixed(2)}s – ${end.toFixed(2)}s)${
                   overlappingFlaw ? ` • ${overlappingFlaw.type.replace(/_/g, ' ')}` : ''
                 }`}
                 role="button"
@@ -99,7 +98,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
                   if (e.key === 'Enter') handleWordClick(w);
                 }}
               >
-                {w.word}
+                {wordText}
               </span>
             );
           })}

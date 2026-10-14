@@ -318,7 +318,7 @@ export const WaveformComparison: React.FC<WaveformComparisonProps> = ({
                       title={`${flaw.type} (${formatTime(flaw.start)} – ${formatTime(flaw.end)})`}
                     >
                       <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] text-[11px] font-medium px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-20 transition-opacity">
-                        {flaw.type.replace(/_/g, ' ')} (+{flaw.duration.toFixed(1)}s)
+                        {flaw.type.replace(/_/g, ' ')} (+{(flaw.duration ?? (flaw.end - flaw.start)).toFixed(1)}s)
                       </div>
                     </div>
                   );

@@ -417,7 +417,18 @@ def run_semantic_evaluation_pipeline(
             deviations_json=json.dumps({
                 "combined": [round(float(abs((p or 0) - (r or 0)) / max(1.0, r or 1.0)), 2) for p, r in zip(p_wpm, r_wpm)]
             }),
-            alignment_words_json=json.dumps(words)
+            alignment_words_json=json.dumps([
+                {
+                    "word": w.get("word") or w.get("text") or "",
+                    "text": w.get("text") or w.get("word") or "",
+                    "start": w.get("start") if w.get("start") is not None else w.get("part_start", 0.0),
+                    "end": w.get("end") if w.get("end") is not None else w.get("part_end", 0.0),
+                    "part_start": w.get("part_start") if w.get("part_start") is not None else w.get("start", 0.0),
+                    "part_end": w.get("part_end") if w.get("part_end") is not None else w.get("end", 0.0),
+                    "probability": w.get("probability", 1.0)
+                }
+                for w in words
+            ])
         )
         db.add(feature_data)
 

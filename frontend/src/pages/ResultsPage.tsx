@@ -220,37 +220,37 @@ export const ResultsPage: React.FC = () => {
             <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
               <span className="text-[10px] text-[var(--muted-foreground)] block">Pacing Tolerance</span>
               <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                ±{(configAudit.paceThreshold * 100).toFixed(0)}% WPM
+                ±{((configAudit.paceThreshold ?? 0.25) * 100).toFixed(0)}% WPM
               </span>
             </div>
             <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
               <span className="text-[10px] text-[var(--muted-foreground)] block">Pitch Modulation</span>
               <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                -{(configAudit.pitchVarianceThreshold * 100).toFixed(0)}% Spread
+                -{((configAudit.pitchVarianceThreshold ?? 0.35) * 100).toFixed(0)}% Spread
               </span>
             </div>
             <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
               <span className="text-[10px] text-[var(--muted-foreground)] block">Pause Anomaly</span>
               <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                &gt;{configAudit.pauseThreshold.toFixed(2)}s
+                &gt;{(configAudit.pauseThreshold ?? 0.4).toFixed(2)}s
               </span>
             </div>
             <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
               <span className="text-[10px] text-[var(--muted-foreground)] block">Energy Delta</span>
               <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                &gt;{(configAudit.energyThreshold * 100).toFixed(0)}% RMS
+                &gt;{((configAudit.energyThreshold ?? 0.3) * 100).toFixed(0)}% RMS
               </span>
             </div>
             <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
               <span className="text-[10px] text-[var(--muted-foreground)] block">Min Duration</span>
               <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                {configAudit.minFlawDurationSec.toFixed(2)}s
+                {(configAudit.minFlawDurationSec ?? 0.4).toFixed(2)}s
               </span>
             </div>
             <div className="p-2.5 rounded bg-[var(--surface)] border border-[var(--border)]">
               <span className="text-[10px] text-[var(--muted-foreground)] block">Merge Gap</span>
               <span className="font-semibold text-[var(--foreground)] mt-0.5 block">
-                {configAudit.flawMergeGapSec.toFixed(2)}s
+                {(configAudit.flawMergeGapSec ?? 0.5).toFixed(2)}s
               </span>
             </div>
           </div>

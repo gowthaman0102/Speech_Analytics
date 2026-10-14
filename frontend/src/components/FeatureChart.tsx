@@ -29,15 +29,24 @@ export const FeatureChart: React.FC<FeatureChartProps> = ({ data, selectedFlawTi
   };
 
   // Prepare chart rows
-  const chartData = data.timePoints.map((t, idx) => ({
-    time: Number(t.toFixed(2)),
-    refPitch: data.referenceFeatures.pitch[idx] ? Math.round(data.referenceFeatures.pitch[idx]) : null,
-    partPitch: data.participantFeatures.pitch[idx] ? Math.round(data.participantFeatures.pitch[idx]) : null,
-    refRms: data.referenceFeatures.rms[idx] ? Number(data.referenceFeatures.rms[idx].toFixed(3)) : 0,
-    partRms: data.participantFeatures.rms[idx] ? Number(data.participantFeatures.rms[idx].toFixed(3)) : 0,
-    refWpm: data.referenceFeatures.wpm[idx] ? Math.round(data.referenceFeatures.wpm[idx]) : 130,
-    partWpm: data.participantFeatures.wpm[idx] ? Math.round(data.participantFeatures.wpm[idx]) : 130,
-    deviation: data.deviations[idx] ? Number(data.deviations[idx].toFixed(2)) : 0,
+  const timePoints = data?.timePoints || [];
+  const refPitch = data?.referenceFeatures?.pitch || [];
+  const partPitch = data?.participantFeatures?.pitch || [];
+  const refRms = data?.referenceFeatures?.rms || [];
+  const partRms = data?.participantFeatures?.rms || [];
+  const refWpm = data?.referenceFeatures?.wpm || [];
+  const partWpm = data?.participantFeatures?.wpm || [];
+  const deviations = data?.deviations || [];
+
+  const chartData = timePoints.map((t, idx) => ({
+    time: Number((t ?? 0).toFixed(2)),
+    refPitch: refPitch[idx] ? Math.round(refPitch[idx]) : null,
+    partPitch: partPitch[idx] ? Math.round(partPitch[idx]) : null,
+    refRms: typeof refRms[idx] === 'number' ? Number(refRms[idx].toFixed(3)) : 0,
+    partRms: typeof partRms[idx] === 'number' ? Number(partRms[idx].toFixed(3)) : 0,
+    refWpm: typeof refWpm[idx] === 'number' ? Math.round(refWpm[idx]) : 130,
+    partWpm: typeof partWpm[idx] === 'number' ? Math.round(partWpm[idx]) : 130,
+    deviation: typeof deviations[idx] === 'number' ? Number(deviations[idx].toFixed(2)) : 0,
   }));
 
   const metricsConfig = {

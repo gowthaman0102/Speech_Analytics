@@ -1,12 +1,14 @@
 import os
 import shutil
 from pathlib import Path
+from typing import Dict
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 class Settings(BaseModel):
     APP_NAME: str = "SpeechScope AI"
+    APP_TAGLINE: str = "Temporal Contrastive Speech Coach"
     APP_ENV: str = os.getenv("APP_ENV", "development")
     DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'speechscope.db'}")
     
@@ -20,15 +22,32 @@ class Settings(BaseModel):
     ENABLE_WHISPERX: bool = os.getenv("ENABLE_WHISPERX", "false").lower() == "true"
     ENABLE_LLM_FEEDBACK: bool = os.getenv("ENABLE_LLM_FEEDBACK", "false").lower() == "true"
     
-    # Deviation weights for contrastive analysis
+    # Composite deviation feature weights (sum = 1.00)
     WEIGHT_PITCH: float = 0.25
     WEIGHT_ENERGY: float = 0.15
     WEIGHT_RATE: float = 0.25
     WEIGHT_PAUSE: float = 0.20
     WEIGHT_MFCC: float = 0.15
     
-    FLAW_DEVIATION_THRESHOLD: float = 0.50
-    FLAW_MIN_DURATION_SEC: float = 0.40  # minimum duration to qualify as a flaw candidate
+    # Configurable detection thresholds for 4 core delivery flaws
+    PACE_DEVIATION_THRESHOLD: float = float(os.getenv("PACE_DEVIATION_THRESHOLD", "0.25"))    # 25% WPM delta
+    PITCH_VARIANCE_THRESHOLD: float = float(os.getenv("PITCH_VARIANCE_THRESHOLD", "0.35"))    # 35% pitch spread reduction
+    PAUSE_DEVIATION_THRESHOLD: float = float(os.getenv("PAUSE_DEVIATION_THRESHOLD", "0.40"))  # 0.40s pause mismatch
+    ENERGY_DEVIATION_THRESHOLD: float = float(os.getenv("ENERGY_DEVIATION_THRESHOLD", "0.30"))# 30% RMS energy delta
+    
+    FLAW_COMPOSITE_THRESHOLD: float = float(os.getenv("FLAW_COMPOSITE_THRESHOLD", "0.32"))
+    FLAW_MIN_DURATION_SEC: float = float(os.getenv("FLAW_MIN_DURATION_SEC", "0.40"))         # minimum candidate length
+    FLAW_MERGE_GAP_SEC: float = float(os.getenv("FLAW_MERGE_GAP_SEC", "0.50"))               # merge adjacent intervals
+    
+    # Configurable Rubric Weights (sum = 1.00)
+    RUBRIC_WEIGHTS: Dict[str, float] = {
+        "pace": 0.20,
+        "pitch": 0.20,
+        "pause": 0.15,
+        "energy": 0.15,
+        "clarity": 0.15,
+        "delivery": 0.15
+    }
 
 settings = Settings()
 

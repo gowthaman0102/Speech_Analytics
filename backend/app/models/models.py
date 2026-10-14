@@ -103,5 +103,6 @@ class EvaluationFeatures(Base):
     reference_features_json = Column(Text, nullable=False)
     participant_features_json = Column(Text, nullable=False)
     deviations_json = Column(Text, nullable=False)
+    alignment_words_json = Column(Text, nullable=True, default="[]")
 
     evaluation = relationship("Evaluation", back_populates="features")

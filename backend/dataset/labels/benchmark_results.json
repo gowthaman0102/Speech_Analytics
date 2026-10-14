@@ -1,0 +1,127 @@
+{
+  "totalEvaluated": 10,
+  "monotonicityPassed": true,
+  "averageIoU": 0.33,
+  "results": [
+    {
+      "variantName": "Almost Perfect Delivery (1.05x)",
+      "gradientLevel": "ALMOST_PERFECT",
+      "expectedFlaw": "NONE",
+      "severity": "LOW",
+      "overallScore": 80.2,
+      "similarity": 77.1,
+      "detectedFlawsCount": 3,
+      "temporalIoU": 1.0,
+      "status": "VERIFIED",
+      "notes": "5% natural speaking cadence tempo variation representing competitive delivery."
+    },
+    {
+      "variantName": "Mildly Fast Delivery (1.10x)",
+      "gradientLevel": "MILD",
+      "expectedFlaw": "MILD_TEMPO_ELEVATION",
+      "severity": "LOW",
+      "overallScore": 75.5,
+      "similarity": 78.0,
+      "detectedFlawsCount": 1,
+      "temporalIoU": 0.06,
+      "status": "DETECTED",
+      "notes": "10% tempo elevation, noticeable to trained judges but preserving intelligibility."
+    },
+    {
+      "variantName": "Moderately Fast Delivery (1.20x)",
+      "gradientLevel": "MODERATE",
+      "expectedFlaw": "RUSHED_DELIVERY",
+      "severity": "MEDIUM",
+      "overallScore": 69.9,
+      "similarity": 74.1,
+      "detectedFlawsCount": 4,
+      "temporalIoU": 0.06,
+      "status": "DETECTED",
+      "notes": "20% accelerated speaking pace, beginning to compress rhetorical breathing pauses."
+    },
+    {
+      "variantName": "Severely Rushed Delivery (1.40x)",
+      "gradientLevel": "SEVERE",
+      "expectedFlaw": "RUSHED_DELIVERY",
+      "severity": "HIGH",
+      "overallScore": 62.7,
+      "similarity": 69.7,
+      "detectedFlawsCount": 7,
+      "temporalIoU": 0.08,
+      "status": "DETECTED",
+      "notes": "40% accelerated pace, causing severe syllable compression and loss of rhetorical structure."
+    },
+    {
+      "variantName": "Mild Volume Drop (-3 dB)",
+      "gradientLevel": "MILD",
+      "expectedFlaw": "MILD_PROJECTION_DROP",
+      "severity": "LOW",
+      "overallScore": 86.2,
+      "similarity": 85.6,
+      "detectedFlawsCount": 0,
+      "temporalIoU": 0.0,
+      "status": "DETECTED",
+      "notes": "Subtle 3 dB reduction in dynamic vocal power."
+    },
+    {
+      "variantName": "Moderate Volume Drop (-6 dB)",
+      "gradientLevel": "MODERATE",
+      "expectedFlaw": "LOW_VOLUME",
+      "severity": "MEDIUM",
+      "overallScore": 81.8,
+      "similarity": 76.9,
+      "detectedFlawsCount": 0,
+      "temporalIoU": 0.0,
+      "status": "DETECTED",
+      "notes": "6 dB vocal attenuation, producing a soft delivery lacking auditorium projection."
+    },
+    {
+      "variantName": "Severely Faded Volume (-10 dB)",
+      "gradientLevel": "SEVERE",
+      "expectedFlaw": "LOW_VOLUME",
+      "severity": "HIGH",
+      "overallScore": 69.0,
+      "similarity": 73.6,
+      "detectedFlawsCount": 3,
+      "temporalIoU": 0.34,
+      "status": "VERIFIED",
+      "notes": "10 dB loss of acoustic energy resulting in muffled, faint vocal presence."
+    },
+    {
+      "variantName": "Moderate Hesitation Pause (1.5s)",
+      "gradientLevel": "MODERATE",
+      "expectedFlaw": "EXCESSIVE_PAUSE",
+      "severity": "MEDIUM",
+      "overallScore": 94.9,
+      "similarity": 94.8,
+      "detectedFlawsCount": 2,
+      "temporalIoU": 1.0,
+      "status": "VERIFIED",
+      "notes": "Unnatural 1.5-second dead air pause inserted mid-delivery."
+    },
+    {
+      "variantName": "Severe Dead Air Hesitation (2.8s)",
+      "gradientLevel": "SEVERE",
+      "expectedFlaw": "EXCESSIVE_PAUSE",
+      "severity": "HIGH",
+      "overallScore": 86.6,
+      "similarity": 88.3,
+      "detectedFlawsCount": 3,
+      "temporalIoU": 0.65,
+      "status": "VERIFIED",
+      "notes": "Prolonged 2.8-second silence indicating memory failure or severe hesitation."
+    },
+    {
+      "variantName": "Monotone Intonation (Flat Pitch)",
+      "gradientLevel": "SEVERE",
+      "expectedFlaw": "MONOTONE",
+      "severity": "HIGH",
+      "overallScore": 80.9,
+      "similarity": 71.1,
+      "detectedFlawsCount": 8,
+      "temporalIoU": 0.09,
+      "status": "DETECTED",
+      "notes": "Suppressed pitch variability and dynamic compression producing robotic intonation."
+    }
+  ]
+}

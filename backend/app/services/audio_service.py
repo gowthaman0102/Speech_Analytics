@@ -62,11 +62,15 @@ def convert_and_preprocess_audio(input_file_path: str, output_prefix: str = "pro
     if audio_data is None or len(audio_data) == 0:
         raise ValueError("Audio file contains no data or could not be decoded.")
 
-    # Amplitude normalization (peak normalize to -1 dB, approx 0.89 amplitude)
+    # Amplitude normalization (peak normalize reference to -1 dBFS, preserve participant dynamics)
     peak = np.max(np.abs(audio_data))
-    if peak > 1e-4:
-        target_peak = 0.891  # -1 dBFS
-        audio_data = audio_data * (target_peak / peak)
+    if output_prefix.startswith("ref"):
+        if peak > 1e-4:
+            target_peak = 0.891  # -1 dBFS
+            audio_data = audio_data * (target_peak / peak)
+    else:
+        if peak > 0.99:
+            audio_data = audio_data * (0.95 / peak)
 
     # Calculate duration
     duration = float(len(audio_data)) / float(sr)

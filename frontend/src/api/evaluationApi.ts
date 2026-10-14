@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { EvaluationDetail, FeatureTimeSeries, DatasetItem } from '../types';
+import type { EvaluationDetail, FeatureTimeSeries, DatasetItem, BenchmarkResponse } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -43,6 +43,16 @@ export const evaluationApi = {
 
   getDataset: async (): Promise<DatasetItem[]> => {
     const res = await api.get('/dataset');
+    return res.data;
+  },
+
+  runBenchmark: async (forceRefresh: boolean = false): Promise<BenchmarkResponse> => {
+    const res = await api.get(`/dataset/benchmark?force_refresh=${forceRefresh}`);
+    return res.data;
+  },
+
+  evaluateVariant: async (variantIndex: number): Promise<{ evaluationId: string; status: string; variantName: string }> => {
+    const res = await api.post(`/evaluations/variant/${variantIndex}`);
     return res.data;
   },
 };

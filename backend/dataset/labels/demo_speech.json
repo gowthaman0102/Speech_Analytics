@@ -8,71 +8,147 @@
   "expectedFlaws": [
     {
       "type": "RUSHED_DELIVERY",
-      "approxTime": "00:08 - 00:15",
+      "start": 4.59,
+      "end": 7.99,
       "severity": "HIGH",
-      "targetSentence": "Today, we must confront the defining challenge of our time: protecting our shared global environment."
+      "targetSentence": "Today, we must confront the defining challenge of our time: protecting our shared global environment.",
+      "description": "Speech rate accelerated by +40% with compressed pauses."
     },
     {
       "type": "LOW_VOLUME",
-      "approxTime": "00:16 - 00:23",
+      "start": 8.19,
+      "end": 15.94,
       "severity": "HIGH",
-      "targetSentence": "We cannot afford hesitation or complacency, because every passing decade reduces our margin for effective action."
+      "targetSentence": "We cannot afford hesitation or complacency, because every passing decade reduces our margin for effective action.",
+      "description": "Vocal energy dropped by -8 dB relative to baseline."
     },
     {
       "type": "EXCESSIVE_PAUSE",
-      "approxTime": "00:23 - 00:27",
+      "start": 15.94,
+      "end": 18.74,
       "severity": "HIGH",
-      "targetSentence": "Mid-speech hesitation gap (2.8s)"
+      "targetSentence": "Mid-speech dead air hesitation (2.8s)",
+      "description": "2.8-second unplanned hesitation gap breaking continuity."
     },
     {
       "type": "MONOTONE",
-      "approxTime": "00:32 - 00:40",
-      "severity": "MEDIUM",
-      "targetSentence": "Let us choose responsibility today, so that tomorrow remains worthy of our hopes."
+      "start": 25.56,
+      "end": 31.2,
+      "severity": "HIGH",
+      "targetSentence": "Let us choose responsibility today, so that tomorrow remains worthy of our hopes.",
+      "description": "Suppressed pitch variability producing robotic intonation."
     }
   ],
   "variants": [
     {
-      "variantName": "Rushed Delivery (1.35x)",
-      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_rushed_1.35x.wav",
-      "expectedFlaw": "RUSHED_DELIVERY",
-      "severity": "HIGH",
-      "description": "Artificially accelerated speech cadence (+35% speed), decreasing rhetorical pause duration."
-    },
-    {
-      "variantName": "Slow Delivery (0.75x)",
-      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_slow_0.75x.wav",
-      "expectedFlaw": "SLOW_DELIVERY",
-      "severity": "HIGH",
-      "description": "Significantly dragged pace (-25% speed), elongating vowel phonemes and losing momentum."
-    },
-    {
-      "variantName": "Low Volume Projection (-10 dB)",
-      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_low_volume_-10dB.wav",
-      "expectedFlaw": "LOW_VOLUME",
-      "severity": "HIGH",
-      "description": "10 dB acoustic attenuation creating faint vocal presence and degraded audibility."
-    },
-    {
-      "variantName": "Excessive Pause Hesitation (2.2s)",
-      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_excessive_pause.wav",
-      "expectedFlaw": "EXCESSIVE_PAUSE",
-      "severity": "HIGH",
-      "description": "Unnatural 2.2-second dead air inserted mid-speech, breaking rhetorical continuity."
-    },
-    {
-      "variantName": "Monotone Intonation",
-      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_monotone.wav",
-      "expectedFlaw": "MONOTONE",
-      "severity": "MEDIUM",
-      "description": "Suppressed pitch variability and dynamic compression creating a flat contour."
-    },
-    {
-      "variantName": "Near-Perfect Delivery (1.04x)",
-      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_near_perfect_1.04x.wav",
+      "variantName": "Almost Perfect Delivery (1.05x)",
+      "gradientLevel": "ALMOST_PERFECT",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_almost_perfect_1.05x.wav",
+      "speedFactor": 1.05,
+      "volumeDeltaDb": 0.0,
       "expectedFlaw": "NONE",
       "severity": "LOW",
-      "description": "Mild 4% natural tempo variation representing an excellent competitive delivery."
+      "expectedInterval": "0.0s - 29.5s",
+      "description": "5% natural speaking cadence tempo variation representing competitive delivery."
+    },
+    {
+      "variantName": "Mildly Fast Delivery (1.10x)",
+      "gradientLevel": "MILD",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_mild_fast_1.10x.wav",
+      "speedFactor": 1.1,
+      "volumeDeltaDb": 0.0,
+      "expectedFlaw": "MILD_TEMPO_ELEVATION",
+      "severity": "LOW",
+      "expectedInterval": "0.0s - 28.1s",
+      "description": "10% tempo elevation, noticeable to trained judges but preserving intelligibility."
+    },
+    {
+      "variantName": "Moderately Fast Delivery (1.20x)",
+      "gradientLevel": "MODERATE",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_moderate_fast_1.20x.wav",
+      "speedFactor": 1.2,
+      "volumeDeltaDb": 0.0,
+      "expectedFlaw": "RUSHED_DELIVERY",
+      "severity": "MEDIUM",
+      "expectedInterval": "0.0s - 25.8s",
+      "description": "20% accelerated speaking pace, beginning to compress rhetorical breathing pauses."
+    },
+    {
+      "variantName": "Severely Rushed Delivery (1.40x)",
+      "gradientLevel": "SEVERE",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_severe_fast_1.40x.wav",
+      "speedFactor": 1.4,
+      "volumeDeltaDb": 0.0,
+      "expectedFlaw": "RUSHED_DELIVERY",
+      "severity": "HIGH",
+      "expectedInterval": "0.0s - 22.1s",
+      "description": "40% accelerated pace, causing severe syllable compression and loss of rhetorical structure."
+    },
+    {
+      "variantName": "Mild Volume Drop (-3 dB)",
+      "gradientLevel": "MILD",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_mild_low_volume_-3dB.wav",
+      "speedFactor": 1.0,
+      "volumeDeltaDb": -3.0,
+      "expectedFlaw": "MILD_PROJECTION_DROP",
+      "severity": "LOW",
+      "expectedInterval": "0.0s - 31.0s",
+      "description": "Subtle 3 dB reduction in dynamic vocal power."
+    },
+    {
+      "variantName": "Moderate Volume Drop (-6 dB)",
+      "gradientLevel": "MODERATE",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_moderate_low_volume_-6dB.wav",
+      "speedFactor": 1.0,
+      "volumeDeltaDb": -6.0,
+      "expectedFlaw": "LOW_VOLUME",
+      "severity": "MEDIUM",
+      "expectedInterval": "0.0s - 31.0s",
+      "description": "6 dB vocal attenuation, producing a soft delivery lacking auditorium projection."
+    },
+    {
+      "variantName": "Severely Faded Volume (-10 dB)",
+      "gradientLevel": "SEVERE",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_severe_low_volume_-10dB.wav",
+      "speedFactor": 1.0,
+      "volumeDeltaDb": -10.0,
+      "expectedFlaw": "LOW_VOLUME",
+      "severity": "HIGH",
+      "expectedInterval": "0.0s - 31.0s",
+      "description": "10 dB loss of acoustic energy resulting in muffled, faint vocal presence."
+    },
+    {
+      "variantName": "Moderate Hesitation Pause (1.5s)",
+      "gradientLevel": "MODERATE",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_moderate_pause_1.5s.wav",
+      "speedFactor": 1.0,
+      "volumeDeltaDb": 0.0,
+      "expectedFlaw": "EXCESSIVE_PAUSE",
+      "severity": "MEDIUM",
+      "expectedInterval": "15.5s - 17.0s",
+      "description": "Unnatural 1.5-second dead air pause inserted mid-delivery."
+    },
+    {
+      "variantName": "Severe Dead Air Hesitation (2.8s)",
+      "gradientLevel": "SEVERE",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_severe_pause_2.8s.wav",
+      "speedFactor": 1.0,
+      "volumeDeltaDb": 0.0,
+      "expectedFlaw": "EXCESSIVE_PAUSE",
+      "severity": "HIGH",
+      "expectedInterval": "15.5s - 18.3s",
+      "description": "Prolonged 2.8-second silence indicating memory failure or severe hesitation."
+    },
+    {
+      "variantName": "Monotone Intonation (Flat Pitch)",
+      "gradientLevel": "SEVERE",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_monotone_severe.wav",
+      "speedFactor": 1.0,
+      "volumeDeltaDb": 0.0,
+      "expectedFlaw": "MONOTONE",
+      "severity": "HIGH",
+      "expectedInterval": "0.0s - 31.0s",
+      "description": "Suppressed pitch variability and dynamic compression producing robotic intonation."
     }
   ]
 }

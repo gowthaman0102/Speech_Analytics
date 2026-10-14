@@ -21,40 +21,56 @@ def calculate_rubric_scores(
     """
     devs = time_analysis["deviations"]
     
+    def get_flaw_weight(severity: str) -> float:
+        if severity == "HIGH":
+            return 1.0
+        elif severity == "MEDIUM":
+            return 0.6
+        return 0.25
+
     # 1. Pace & Fluency Error
-    # Mean rate deviation + penalty for rushed/slow flaws
     mean_rate_dev = float(np.mean(devs["rate"])) if devs["rate"] else 0.2
-    flaw_penalty_pace = sum(0.08 for f in flaws if f["type"] in ["RUSHED_DELIVERY", "SLOW_DELIVERY", "POOR_FLUENCY"])
+    flaw_penalty_pace = sum(0.08 * get_flaw_weight(f.get("severity", "MEDIUM")) for f in flaws if f["type"] in ["RUSHED_DELIVERY", "SLOW_DELIVERY", "POOR_FLUENCY"])
     pace_error = min(1.0, mean_rate_dev + flaw_penalty_pace)
     pace_score = round(float(np.clip(100.0 * (1.0 - pace_error), 20.0, 100.0)), 1)
 
     # 2. Pitch & Modulation Error
     mean_pitch_dev = float(np.mean(devs["pitch"])) if devs["pitch"] else 0.2
-    flaw_penalty_pitch = sum(0.10 for f in flaws if f["type"] in ["MONOTONE", "EXCESSIVE_PITCH_VARIATION"])
+    flaw_penalty_pitch = sum(0.10 * get_flaw_weight(f.get("severity", "MEDIUM")) for f in flaws if f["type"] in ["MONOTONE", "EXCESSIVE_PITCH_VARIATION"])
     pitch_error = min(1.0, mean_pitch_dev + flaw_penalty_pitch)
     pitch_score = round(float(np.clip(100.0 * (1.0 - pitch_error), 20.0, 100.0)), 1)
 
     # 3. Pause & Rhythm Error
     mean_pause_dev = float(np.mean(devs["pause"])) if devs["pause"] else 0.15
-    flaw_penalty_pause = sum(0.10 for f in flaws if f["type"] in ["MISSING_PAUSE", "EXCESSIVE_PAUSE"])
+    flaw_penalty_pause = sum(0.10 * get_flaw_weight(f.get("severity", "MEDIUM")) for f in flaws if f["type"] in ["MISSING_PAUSE", "EXCESSIVE_PAUSE"])
     pause_error = min(1.0, mean_pause_dev + flaw_penalty_pause)
     pause_score = round(float(np.clip(100.0 * (1.0 - pause_error), 20.0, 100.0)), 1)
 
     # 4. Vocal Energy Error
     mean_energy_dev = float(np.mean(devs["energy"])) if devs["energy"] else 0.15
-    flaw_penalty_energy = sum(0.08 for f in flaws if f["type"] in ["LOW_VOLUME", "EXCESSIVE_VOLUME", "INCONSISTENT_ENERGY"])
+    flaw_penalty_energy = sum(0.08 * get_flaw_weight(f.get("severity", "MEDIUM")) for f in flaws if f["type"] in ["LOW_VOLUME", "EXCESSIVE_VOLUME", "INCONSISTENT_ENERGY"])
     energy_error = min(1.0, mean_energy_dev + flaw_penalty_energy)
     energy_score = round(float(np.clip(100.0 * (1.0 - energy_error), 20.0, 100.0)), 1)
 
     # 5. Clarity & Stability Error
-    mean_mfcc_dev = float(np.mean(devs["mfcc"])) if devs["mfcc"] else 0.2
-    flaw_penalty_clarity = sum(0.06 for f in flaws if f["type"] in ["WEAK_EMPHASIS", "ACOUSTIC_DEVIATION"])
+    raw_mfcc_dev = float(np.mean(devs["mfcc"])) if devs["mfcc"] else 0.15
+    mean_mfcc_dev = max(0.0, (raw_mfcc_dev - 0.12) / 0.88)
+    flaw_penalty_clarity = sum(0.06 * get_flaw_weight(f.get("severity", "MEDIUM")) for f in flaws if f["type"] in ["WEAK_EMPHASIS", "ACOUSTIC_DEVIATION"])
     clarity_error = min(1.0, mean_mfcc_dev + flaw_penalty_clarity)
     clarity_score = round(float(np.clip(100.0 * (1.0 - clarity_error), 20.0, 100.0)), 1)
 
     # 6. Overall Delivery Score (composite of the dimensions + weighted penalty)
     combined_mean_dev = float(np.mean(devs["combined"])) if devs["combined"] else 0.2
     delivery_score = round(float(np.clip(100.0 * (1.0 - combined_mean_dev), 20.0, 100.0)), 1)
+
+    # Clean delivery guarantee: performances with zero MEDIUM/HIGH severity flaws reflect competitive mastery
+    has_significant_flaws = any(f.get("severity") in ["MEDIUM", "HIGH"] for f in flaws)
+    if not has_significant_flaws:
+        pace_score = round(max(pace_score, 88.0), 1)
+        pitch_score = round(max(pitch_score, 88.0), 1)
+        pause_score = round(max(pause_score, 88.0), 1)
+        energy_score = round(max(energy_score, 88.0), 1)
+        delivery_score = round(max(delivery_score, 88.0), 1)
 
     # Deterministic Rubric Combination
     weights = {

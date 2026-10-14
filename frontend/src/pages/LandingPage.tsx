@@ -63,7 +63,7 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 text-xs font-semibold text-slate-300 mb-6 shadow-sm">
             <Radio className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
-            <span>Competitive Speech Evaluation Engine</span>
+            <span>Temporal Contrastive Speech Coach</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
@@ -75,8 +75,8 @@ export const LandingPage: React.FC = () => {
 
           <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-3xl mx-auto font-normal leading-relaxed">
             Turn subjective speech judging into <strong className="text-white font-semibold">measurable</strong>,{' '}
-            <strong className="text-white font-semibold">timestamped</strong>, and{' '}
-            <strong className="text-white font-semibold">explainable</strong> feedback using contrastive acoustic analytics.
+            <strong className="text-white font-semibold">temporally grounded</strong>, and{' '}
+            <strong className="text-white font-semibold">explainable</strong> contrastive coaching.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">

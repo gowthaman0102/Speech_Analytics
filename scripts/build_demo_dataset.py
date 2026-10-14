@@ -13,11 +13,9 @@ sys.path.insert(0, str(backend_dir))
 from app.config import settings
 from app.services.audio_service import convert_and_preprocess_audio
 from app.services.dataset_generator import (
-    apply_speed_change, 
     apply_volume_change_db, 
     apply_monotone_effect, 
-    insert_excessive_pause,
-    generate_flawed_variants
+    generate_gradient_dataset
 )
 
 TRANSCRIPT = """Good morning, members of the jury and respected audience.
@@ -38,7 +36,7 @@ def synthesize_sentence(text: str, out_wav: Path, rate: int = 0, volume: int = 1
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
 
 def main():
-    print("Building SpeechScope AI official demo dataset...")
+    print("Building SpeechScope AI official gradient demo dataset...")
     temp_dir = settings.DATASET_DIR / "temp"
     temp_dir.mkdir(parents=True, exist_ok=True)
     good_dir = settings.DATASET_DIR / "good"
@@ -59,14 +57,7 @@ def main():
     shutil.copy(ref_proc_meta["processed_path"], final_ref_path)
     print(f" -> Reference audio created: {final_ref_path} ({ref_proc_meta['duration']:.2f}s)")
 
-    # 2. Synthesize Participant Speech with Intentional Temporal Flaws:
-    # Sentence 1: Good morning... (Normal, Rate=0)
-    # Sentence 2: Today, we must confront... (Rushed, Rate=6)
-    # Sentence 3: We cannot afford... (Quiet, Volume=35)
-    # Silence: 2.8s excessive pause
-    # Sentence 4: True leadership... (Normal, Rate=0)
-    # Sentence 5: Let us choose responsibility... (Monotone intonation)
-    
+    # 2. Synthesize Participant Speech with Intentional Grounded Flaws:
     sentences = [
         "Good morning, members of the jury and respected audience.",
         "Today, we must confront the defining challenge of our time: protecting our shared global environment.",
@@ -83,14 +74,18 @@ def main():
     synthesize_sentence(sentences[0], p1, rate=0, volume=100)
     d1, _ = sf.read(convert_and_preprocess_audio(str(p1))["processed_path"])
     part_audio_chunks.append(d1)
-    part_audio_chunks.append(np.zeros(int(0.4 * sr)))  # standard natural pause
+    t1_end = len(d1) / sr
+    part_audio_chunks.append(np.zeros(int(0.3 * sr)))
+    t2_start = t1_end + 0.3
 
-    # Part 2: Rushed delivery (+40% speed)
+    # Part 2: Rushed delivery (+40% speed, rate=6)
     p2 = temp_dir / "p2.wav"
     synthesize_sentence(sentences[1], p2, rate=6, volume=100)
     d2, _ = sf.read(convert_and_preprocess_audio(str(p2))["processed_path"])
     part_audio_chunks.append(d2)
+    t2_end = t2_start + (len(d2) / sr)
     part_audio_chunks.append(np.zeros(int(0.2 * sr)))
+    t3_start = t2_end + 0.2
 
     # Part 3: Low vocal energy (-8 dB)
     p3 = temp_dir / "p3.wav"
@@ -98,23 +93,31 @@ def main():
     d3, _ = sf.read(convert_and_preprocess_audio(str(p3))["processed_path"])
     d3_quiet = apply_volume_change_db(d3, -8.0)
     part_audio_chunks.append(d3_quiet)
+    t3_end = t3_start + (len(d3_quiet) / sr)
 
     # Insert Awkward Excessive Pause (2.8 seconds silence)
-    part_audio_chunks.append(np.zeros(int(2.8 * sr)))
+    p_silence = np.zeros(int(2.8 * sr))
+    part_audio_chunks.append(p_silence)
+    t_pause_start = t3_end
+    t_pause_end = t_pause_start + 2.8
+    t4_start = t_pause_end
 
     # Part 4: Normal delivery
     p4 = temp_dir / "p4.wav"
     synthesize_sentence(sentences[3], p4, rate=0, volume=95)
     d4, _ = sf.read(convert_and_preprocess_audio(str(p4))["processed_path"])
     part_audio_chunks.append(d4)
-    part_audio_chunks.append(np.zeros(int(0.5 * sr)))
+    t4_end = t4_start + (len(d4) / sr)
+    part_audio_chunks.append(np.zeros(int(0.4 * sr)))
+    t5_start = t4_end + 0.4
 
     # Part 5: Monotone delivery (flattened pitch dynamics)
     p5 = temp_dir / "p5.wav"
     synthesize_sentence(sentences[4], p5, rate=0, volume=95)
     d5, _ = sf.read(convert_and_preprocess_audio(str(p5))["processed_path"])
-    d5_mono = apply_monotone_effect(d5, sr)
+    d5_mono = apply_monotone_effect(d5, sr, severity="severe")
     part_audio_chunks.append(d5_mono)
+    t5_end = t5_start + (len(d5_mono) / sr)
 
     # Combine into participant audio
     participant_audio = np.concatenate(part_audio_chunks)
@@ -128,11 +131,11 @@ def main():
     with open(transcript_file, "w", encoding="utf-8") as f:
         f.write(TRANSCRIPT)
 
-    # 4. Generate the full contrastive flaw variants suite
-    print(" -> Generating full gradient flaw variants suite...")
-    variants = generate_flawed_variants(str(final_ref_path), flawed_dir)
+    # 4. Generate the full contrastive gradient flaw variants suite
+    print(" -> Generating 10-tier contrastive gradient variants...")
+    variants = generate_gradient_dataset(str(final_ref_path), flawed_dir)
 
-    # 5. Save Labels Metadata
+    # 5. Save Labels Metadata with exact timestamps and ground truth
     labels_file = labels_dir / "demo_speech.json"
     demo_labels = {
         "speechId": "demo_speech_001",
@@ -144,27 +147,35 @@ def main():
         "expectedFlaws": [
             {
                 "type": "RUSHED_DELIVERY",
-                "approxTime": "00:08 - 00:15",
+                "start": round(t2_start, 2),
+                "end": round(t2_end, 2),
                 "severity": "HIGH",
-                "targetSentence": sentences[1]
+                "targetSentence": sentences[1],
+                "description": "Speech rate accelerated by +40% with compressed pauses."
             },
             {
                 "type": "LOW_VOLUME",
-                "approxTime": "00:16 - 00:23",
+                "start": round(t3_start, 2),
+                "end": round(t3_end, 2),
                 "severity": "HIGH",
-                "targetSentence": sentences[2]
+                "targetSentence": sentences[2],
+                "description": "Vocal energy dropped by -8 dB relative to baseline."
             },
             {
                 "type": "EXCESSIVE_PAUSE",
-                "approxTime": "00:23 - 00:27",
+                "start": round(t_pause_start, 2),
+                "end": round(t_pause_end, 2),
                 "severity": "HIGH",
-                "targetSentence": "Mid-speech hesitation gap (2.8s)"
+                "targetSentence": "Mid-speech dead air hesitation (2.8s)",
+                "description": "2.8-second unplanned hesitation gap breaking continuity."
             },
             {
                 "type": "MONOTONE",
-                "approxTime": "00:32 - 00:40",
-                "severity": "MEDIUM",
-                "targetSentence": sentences[4]
+                "start": round(t5_start, 2),
+                "end": round(t5_end, 2),
+                "severity": "HIGH",
+                "targetSentence": sentences[4],
+                "description": "Suppressed pitch variability producing robotic intonation."
             }
         ],
         "variants": variants
@@ -173,7 +184,7 @@ def main():
         json.dump(demo_labels, f, indent=2)
 
     print(f" -> Demo dataset labels saved to: {labels_file}")
-    print("\n[SUCCESS] Official Demo Dataset successfully built and verified!")
+    print("\n[SUCCESS] Official Gradient Demo Dataset successfully built and verified!")
 
 if __name__ == "__main__":
     main()

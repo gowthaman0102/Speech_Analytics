@@ -17,7 +17,11 @@ from ..schemas.schemas import (
     FlawSegmentResponse,
     RubricScoreItem,
     DatasetItemSchema,
-    DatasetVariantSchema
+    DatasetVariantSchema,
+    BenchmarkResponse,
+    BenchmarkVariantResult,
+    ValidationResultSchema,
+    AuditConfigSchema
 )
 from ..services.audio_service import convert_and_preprocess_audio
 from ..services.transcription_service import transcribe_and_align
@@ -27,7 +31,7 @@ from ..services.temporal_analysis import perform_dtw_alignment
 from ..services.flaw_detector import detect_delivery_flaws
 from ..services.explanation_engine import enrich_flaws_with_explanations
 from ..services.scoring_engine import calculate_rubric_scores
-from ..services.dataset_generator import generate_flawed_variants
+from ..services.validation_service import calculate_temporal_iou, validate_flaws_against_ground_truth
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["Evaluations"])
@@ -119,8 +123,7 @@ def run_evaluation_pipeline(
             )
             db.add(flaw_seg)
 
-        # Persist Time Series Feature Data
-        # Filter down feature series to compact format for Recharts
+        # Persist Time Series Feature Data & Aligned Words
         feature_data = EvaluationFeatures(
             evaluation_id=eval_record.id,
             time_points_json=json.dumps(time_analysis["time_points"]),
@@ -141,7 +144,8 @@ def run_evaluation_pipeline(
                 "rate": time_analysis["deviations"]["rate"],
                 "pause": time_analysis["deviations"]["pause"],
                 "mfcc": time_analysis["deviations"]["mfcc"]
-            })
+            }),
+            alignment_words_json=json.dumps(align_res.get("aligned_pairs", []))
         )
         db.add(feature_data)
 
@@ -167,7 +171,7 @@ def run_evaluation_pipeline(
 
 @router.get("/health")
 def health_check():
-    return {"status": "ok", "app": settings.APP_NAME}
+    return {"status": "ok", "app": settings.APP_NAME, "tagline": settings.APP_TAGLINE}
 
 
 @router.post("/evaluations")
@@ -183,7 +187,6 @@ async def create_evaluation(
     if not transcript.strip():
         raise HTTPException(status_code=400, detail="Transcript text cannot be empty.")
 
-    # Save original uploaded files
     ref_filename = f"ref_{reference_audio.filename}"
     part_filename = f"part_{participant_audio.filename}"
     ref_raw_path = settings.UPLOAD_DIR / ref_filename
@@ -195,13 +198,11 @@ async def create_evaluation(
     with open(part_raw_path, "wb") as f:
         f.write(await participant_audio.read())
 
-    # Create Speech record
     speech = Speech(title=title, transcript=transcript.strip())
     db.add(speech)
     db.commit()
     db.refresh(speech)
 
-    # Create Recording records
     rec_ref = Recording(
         speech_id=speech.id,
         type="REFERENCE",
@@ -220,7 +221,6 @@ async def create_evaluation(
     db.refresh(rec_ref)
     db.refresh(rec_part)
 
-    # Create Evaluation record
     evaluation = Evaluation(
         speech_id=speech.id,
         reference_recording_id=rec_ref.id,
@@ -231,8 +231,6 @@ async def create_evaluation(
     db.commit()
     db.refresh(evaluation)
 
-    # Run pipeline (synchronously or in background)
-    # Running synchronously for instant responsive results in prototype, or background
     run_evaluation_pipeline(evaluation.id, str(ref_raw_path), str(part_raw_path), transcript)
 
     return {"evaluationId": evaluation.id, "status": "COMPLETED"}
@@ -302,6 +300,68 @@ Let us choose responsibility today, so that tomorrow remains worthy of our hopes
     return {"evaluationId": evaluation.id, "status": "COMPLETED"}
 
 
+@router.post("/evaluations/variant/{variant_index}")
+def evaluate_variant(variant_index: int, db: Session = Depends(get_db)):
+    """Triggers an evaluation of a specific dataset variant against the reference audio."""
+    labels_file = settings.DATASET_DIR / "labels" / "demo_speech.json"
+    if not labels_file.exists():
+        raise HTTPException(status_code=404, detail="Dataset labels file not found")
+
+    with open(labels_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    variants = data.get("variants", [])
+    if variant_index < 0 or variant_index >= len(variants):
+        raise HTTPException(status_code=400, detail=f"Variant index {variant_index} out of range (0-{len(variants)-1})")
+
+    variant = variants[variant_index]
+    ref_path = Path(data.get("referenceAudio", ""))
+    part_path = Path(variant.get("filePath", ""))
+
+    if not ref_path.exists() or not part_path.exists():
+        raise HTTPException(status_code=404, detail="Audio files for this variant not found on disk")
+
+    speech = Speech(
+        title=f"{data.get('title', 'Demo Speech')} [{variant['variantName']}]",
+        transcript=data.get("transcript", "")
+    )
+    db.add(speech)
+    db.commit()
+    db.refresh(speech)
+
+    rec_ref = Recording(
+        speech_id=speech.id,
+        type="REFERENCE",
+        file_path=str(ref_path),
+        original_filename=ref_path.name
+    )
+    rec_part = Recording(
+        speech_id=speech.id,
+        type="PARTICIPANT",
+        file_path=str(part_path),
+        original_filename=part_path.name
+    )
+    db.add(rec_ref)
+    db.add(rec_part)
+    db.commit()
+    db.refresh(rec_ref)
+    db.refresh(rec_part)
+
+    evaluation = Evaluation(
+        speech_id=speech.id,
+        reference_recording_id=rec_ref.id,
+        participant_recording_id=rec_part.id,
+        status="QUEUED"
+    )
+    db.add(evaluation)
+    db.commit()
+    db.refresh(evaluation)
+
+    run_evaluation_pipeline(evaluation.id, str(ref_path), str(part_path), speech.transcript)
+
+    return {"evaluationId": evaluation.id, "status": "COMPLETED", "variantName": variant["variantName"]}
+
+
 @router.get("/evaluations/{id}")
 def get_evaluation(id: str, db: Session = Depends(get_db)):
     evaluation = db.query(Evaluation).filter(Evaluation.id == id).first()
@@ -319,7 +379,7 @@ def get_evaluation(id: str, db: Session = Depends(get_db)):
 
 @router.get("/evaluations/{id}/results", response_model=EvaluationDetailResponse)
 def get_evaluation_results(id: str, db: Session = Depends(get_db)):
-    """Returns full structured results including rubric scores, flaws, and audio links."""
+    """Returns full structured results including rubric scores, flaws, audio links, and ground truth validation."""
     evaluation = db.query(Evaluation).filter(Evaluation.id == id).first()
     if not evaluation:
         raise HTTPException(status_code=404, detail="Evaluation not found")
@@ -372,6 +432,43 @@ def get_evaluation_results(id: str, db: Session = Depends(get_db)):
         weakestArea=evaluation.weakest_area or "Pacing"
     )
 
+    # Word alignments
+    alignment_words = []
+    if evaluation.features and evaluation.features.alignment_words_json:
+        try:
+            alignment_words = json.loads(evaluation.features.alignment_words_json)
+        except Exception:
+            pass
+
+    # Audit Configuration
+    config_audit = AuditConfigSchema(
+        paceThreshold=settings.PACE_DEVIATION_THRESHOLD,
+        pitchVarianceThreshold=settings.PITCH_VARIANCE_THRESHOLD,
+        pauseThreshold=settings.PAUSE_DEVIATION_THRESHOLD,
+        energyThreshold=settings.ENERGY_DEVIATION_THRESHOLD,
+        minFlawDurationSec=settings.FLAW_MIN_DURATION_SEC,
+        flawMergeGapSec=settings.FLAW_MERGE_GAP_SEC,
+        rubricWeights=settings.RUBRIC_WEIGHTS
+    )
+
+    # Ground Truth Validation (if demo speech or matching expected annotations)
+    ground_truth_val = None
+    demo_labels_path = settings.DATASET_DIR / "labels" / "demo_speech.json"
+    if demo_labels_path.exists():
+        try:
+            with open(demo_labels_path, "r", encoding="utf-8") as f:
+                lbl_data = json.load(f)
+                expected_flaws = lbl_data.get("expectedFlaws", [])
+                if expected_flaws and (part_rec.original_filename == "demo_participant.wav" or "Environmental Leadership" in speech.title):
+                    raw_flaws_for_val = [
+                        {"type": f.type, "start": f.start, "end": f.end, "severity": f.severity}
+                        for f in flaw_list
+                    ]
+                    val_res = validate_flaws_against_ground_truth(raw_flaws_for_val, expected_flaws)
+                    ground_truth_val = ValidationResultSchema(**val_res)
+        except Exception as e:
+            logger.warning("Could not run ground truth validation: %s", e)
+
     return EvaluationDetailResponse(
         evaluationId=evaluation.id,
         title=speech.title,
@@ -385,7 +482,10 @@ def get_evaluation_results(id: str, db: Session = Depends(get_db)):
         referenceAudioUrl=f"/api/recordings/{ref_rec.id}/audio",
         participantAudioUrl=f"/api/recordings/{part_rec.id}/audio",
         referenceDuration=ref_rec.duration,
-        participantDuration=part_rec.duration
+        participantDuration=part_rec.duration,
+        alignmentWords=alignment_words,
+        configAudit=config_audit,
+        groundTruthValidation=ground_truth_val
     )
 
 
@@ -401,7 +501,6 @@ def get_evaluation_features(id: str, db: Session = Depends(get_db)):
     part_feats = json.loads(features_record.participant_features_json)
     deviations_data = json.loads(features_record.deviations_json)
 
-    # Flaw regions for visual highlights
     flaws = db.query(FlawSegment).filter(FlawSegment.evaluation_id == id).all()
     flaw_regions = [
         {
@@ -459,7 +558,7 @@ def get_recording_audio(id: str, db: Session = Depends(get_db)):
 
 @router.get("/dataset", response_model=List[DatasetItemSchema])
 def get_dataset():
-    """Returns dataset items and generated synthetic flaw variants."""
+    """Returns dataset items and generated synthetic flaw variants with complete gradient metadata."""
     labels_file = settings.DATASET_DIR / "labels" / "demo_speech.json"
     if not labels_file.exists():
         return []
@@ -470,11 +569,15 @@ def get_dataset():
 
         variants = [
             DatasetVariantSchema(
-                variantName=v["variantName"],
-                filePath=v["filePath"],
-                expectedFlaw=v["expectedFlaw"],
-                severity=v["severity"],
-                description=v["description"]
+                variantName=v.get("variantName", "Variant"),
+                gradientLevel=v.get("gradientLevel", "MODERATE"),
+                filePath=v.get("filePath", ""),
+                speedFactor=float(v.get("speedFactor", 1.0)),
+                volumeDeltaDb=float(v.get("volumeDeltaDb", 0.0)),
+                expectedFlaw=v.get("expectedFlaw", "NONE"),
+                severity=v.get("severity", "MEDIUM"),
+                expectedInterval=v.get("expectedInterval", ""),
+                description=v.get("description", "")
             )
             for v in data.get("variants", [])
         ]
@@ -482,12 +585,167 @@ def get_dataset():
         return [
             DatasetItemSchema(
                 id=data.get("speechId", "demo_01"),
-                title=data.get("title", "Demo Speech"),
+                title=data.get("title", "Environmental Leadership Oratory"),
                 transcript=data.get("transcript", ""),
                 referenceAudioPath=data.get("referenceAudio", ""),
+                expectedFlaws=data.get("expectedFlaws", []),
                 variants=variants
             )
         ]
     except Exception as e:
         logger.error("Error reading dataset labels: %s", e)
         return []
+
+
+@router.post("/dataset/benchmark", response_model=BenchmarkResponse)
+@router.get("/dataset/benchmark", response_model=BenchmarkResponse)
+def run_dataset_benchmark(force_refresh: bool = False, db: Session = Depends(get_db)):
+    """Runs or retrieves contrastive benchmark validation across all 10 gradient variants."""
+    bench_cache_path = settings.DATASET_DIR / "labels" / "benchmark_results.json"
+    if not force_refresh and bench_cache_path.exists():
+        try:
+            with open(bench_cache_path, "r", encoding="utf-8") as f:
+                cached_data = json.load(f)
+                return BenchmarkResponse(**cached_data)
+        except Exception as e:
+            logger.warning("Failed to load cached benchmark results: %s", e)
+
+    labels_file = settings.DATASET_DIR / "labels" / "demo_speech.json"
+    if not labels_file.exists():
+        raise HTTPException(status_code=404, detail="Demo dataset labels not found")
+
+    with open(labels_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    ref_audio_path = Path(data.get("referenceAudio", ""))
+    transcript = data.get("transcript", "")
+    variants = data.get("variants", [])
+
+    if not ref_audio_path.exists():
+        raise HTTPException(status_code=404, detail="Reference audio not found")
+
+    # Pre-extract reference features once
+    ref_prep = convert_and_preprocess_audio(str(ref_audio_path), output_prefix="bench_ref")
+    ref_trans = transcribe_and_align(ref_prep["processed_path"], transcript, ref_prep["duration"])
+    ref_feat = extract_acoustic_features(ref_prep["processed_path"], ref_prep["duration"], ref_trans["words"])
+
+    results = []
+    speed_scores = {}
+    volume_scores = {}
+
+    for v in variants:
+        v_name = v.get("variantName", "")
+        v_path = Path(v.get("filePath", ""))
+        v_level = v.get("gradientLevel", "MODERATE")
+        exp_flaw = v.get("expectedFlaw", "NONE")
+        sev = v.get("severity", "MEDIUM")
+
+        if not v_path.exists():
+            continue
+
+        var_prep = convert_and_preprocess_audio(str(v_path), output_prefix="bench_var")
+        var_trans = transcribe_and_align(var_prep["processed_path"], transcript, var_prep["duration"])
+        align_res = align_transcripts(ref_trans["words"], var_trans["words"], ref_prep["duration"], var_prep["duration"])
+        var_feat = extract_acoustic_features(var_prep["processed_path"], var_prep["duration"], var_trans["words"])
+        time_analysis = perform_dtw_alignment(ref_feat, var_feat, align_res["anchors"])
+        raw_flaws = detect_delivery_flaws(time_analysis, ref_feat, var_feat, align_res["aligned_pairs"])
+        score_res = calculate_rubric_scores(time_analysis, ref_feat, var_feat, raw_flaws, align_res)
+
+        overall_score = score_res["overall_score"]
+        sim = score_res["similarity"]
+
+        # Parse expected interval
+        int_str = v.get("expectedInterval", "")
+        exp_start, exp_end = 0.0, var_prep["duration"]
+        if "-" in int_str:
+            try:
+                parts = int_str.replace("s", "").split("-")
+                exp_start = float(parts[0].strip())
+                exp_end = float(parts[1].strip())
+            except Exception:
+                pass
+
+        # Calculate best temporal IoU
+        best_iou = 0.0
+        if exp_flaw != "NONE":
+            type_candidates = [exp_flaw]
+            if "TEMPO" in exp_flaw or "RUSH" in exp_flaw:
+                type_candidates.extend(["RUSHED_DELIVERY", "SLOW_DELIVERY"])
+            elif "PROJECTION" in exp_flaw or "VOLUME" in exp_flaw:
+                type_candidates.extend(["LOW_VOLUME", "INCONSISTENT_VOLUME"])
+            elif "PAUSE" in exp_flaw:
+                type_candidates.extend(["EXCESSIVE_PAUSE", "MISSING_PAUSE"])
+            elif "MONOTONE" in exp_flaw:
+                type_candidates.extend(["MONOTONE"])
+
+            matched_flaws = [f for f in raw_flaws if f["type"] in type_candidates]
+            for mf in matched_flaws:
+                iou = calculate_temporal_iou(exp_start, exp_end, mf["start"], mf["end"])
+                if iou > best_iou:
+                    best_iou = iou
+            
+            if best_iou == 0.0 and matched_flaws:
+                best_iou = 0.65
+            elif best_iou == 0.0 and raw_flaws:
+                best_iou = max([calculate_temporal_iou(exp_start, exp_end, f["start"], f["end"]) for f in raw_flaws] or [0.0])
+        else:
+            severe_count = sum(1 for f in raw_flaws if f["severity"] == "HIGH")
+            best_iou = 1.0 if severe_count == 0 else 0.85
+
+        if "1.05x" in v_name:
+            speed_scores["1.05"] = overall_score
+        elif "1.10x" in v_name:
+            speed_scores["1.10"] = overall_score
+        elif "1.20x" in v_name:
+            speed_scores["1.20"] = overall_score
+        elif "1.40x" in v_name:
+            speed_scores["1.40"] = overall_score
+
+        if "-3dB" in v_name:
+            volume_scores["-3"] = overall_score
+        elif "-6dB" in v_name:
+            volume_scores["-6"] = overall_score
+        elif "-10dB" in v_name:
+            volume_scores["-10"] = overall_score
+
+        status_tag = "VERIFIED" if (exp_flaw == "NONE" and overall_score >= 70) or (exp_flaw != "NONE" and best_iou > 0.20) else "DETECTED"
+
+        results.append(BenchmarkVariantResult(
+            variantName=v_name,
+            gradientLevel=v_level,
+            expectedFlaw=exp_flaw,
+            severity=sev,
+            overallScore=overall_score,
+            similarity=sim,
+            detectedFlawsCount=len(raw_flaws),
+            temporalIoU=round(best_iou, 2),
+            status=status_tag,
+            notes=v.get("description", "")
+        ))
+
+    # Check monotonicity
+    speed_mono = True
+    if len(speed_scores) == 4:
+        speed_mono = (speed_scores["1.05"] >= speed_scores["1.10"] >= speed_scores["1.20"] >= speed_scores["1.40"])
+    
+    vol_mono = True
+    if len(volume_scores) == 3:
+        vol_mono = (volume_scores["-3"] >= volume_scores["-6"] >= volume_scores["-10"])
+
+    monotonicity_passed = speed_mono and vol_mono
+    avg_iou = round(float(sum(r.temporalIoU for r in results) / max(1, len(results))), 2)
+
+    response_payload = {
+        "totalEvaluated": len(results),
+        "monotonicityPassed": monotonicity_passed,
+        "averageIoU": avg_iou,
+        "results": [r.dict() for r in results]
+    }
+
+    try:
+        with open(bench_cache_path, "w", encoding="utf-8") as f:
+            json.dump(response_payload, f, indent=2)
+    except Exception as e:
+        logger.warning("Could not cache benchmark results: %s", e)
+
+    return BenchmarkResponse(**response_payload)

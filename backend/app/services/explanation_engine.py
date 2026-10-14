@@ -2,8 +2,10 @@ from typing import Dict, Any, List
 
 def generate_causal_explanation(flaw: Dict[str, Any]) -> Dict[str, str]:
     """
-    Generates measurable, explainable causal feedback for a detected delivery flaw.
-    Constructs exact Cause, Effect, Recommendation, and Judge Technical rationale.
+    Generates causal, explainable feedback following the complete causal chain:
+    Measurement -> Reference value -> Participant value -> Difference ->
+    Configured threshold -> Classification -> Perceptual consequence -> Improvement recommendation.
+    Also produces 'simpleFeedback' and 'whyFlagged' mathematical rationale for judge mode.
     """
     flaw_type = flaw["type"]
     metrics = flaw.get("metrics", {})
@@ -11,87 +13,181 @@ def generate_causal_explanation(flaw: Dict[str, Any]) -> Dict[str, str]:
     start_t = flaw["start"]
     end_t = flaw["end"]
 
+    simple_feedback = ""
     cause = ""
     effect = ""
     recommendation = ""
+    why_flagged = ""
 
     if flaw_type == "RUSHED_DELIVERY":
-        ref_wpm = metrics.get("referenceWpm", 130)
-        part_wpm = metrics.get("participantWpm", 185)
+        ref_wpm = metrics.get("referenceValue", 130)
+        part_wpm = metrics.get("participantValue", 185)
         diff_pct = metrics.get("differencePercent", 42.0)
-        cause = f"Participant speech rate was {part_wpm} WPM compared to reference {ref_wpm} WPM ({diff_pct:+.1f}% deviation)."
-        effect = "This compresses syllable durations, blurs word boundaries, and removes necessary cognitive processing time for the audience."
-        recommendation = f"Slow down the delivery during '{snippet}'. Add a conscious 300–400 ms breath pause after key emphasized nouns."
+        thresh = metrics.get("configuredThreshold", "+25%")
+
+        simple_feedback = f"You rushed this section. Try slowing down on '{snippet}'."
+        cause = f"Participant cadence accelerated to {part_wpm} WPM compared to baseline {ref_wpm} WPM ({diff_pct:+.1f}% deviation)."
+        effect = "Syllable duration compression removes necessary rhetorical spacing, reducing audience retention."
+        recommendation = f"Slow your delivery on '{snippet}'. Insert a clean 300–400 ms breath pause after key nouns."
+        why_flagged = (
+            f"Measurement: Speaking Rate (WPM)\n"
+            f"Reference: {ref_wpm} WPM\n"
+            f"Participant: {part_wpm} WPM\n"
+            f"Difference: {diff_pct:+.1f}%\n"
+            f"Configured Threshold: {thresh}\n"
+            f"Classification: RUSHED DELIVERY\n"
+            f"Rationale: Speaking rate exceeded the pace deviation threshold by {abs(diff_pct) - 25:.1f}%."
+        )
 
     elif flaw_type == "SLOW_DELIVERY":
-        ref_wpm = metrics.get("referenceWpm", 135)
-        part_wpm = metrics.get("participantWpm", 95)
+        ref_wpm = metrics.get("referenceValue", 135)
+        part_wpm = metrics.get("participantValue", 95)
         diff_pct = metrics.get("differencePercent", -29.6)
-        cause = f"Speaking pace dropped to {part_wpm} WPM against baseline of {ref_wpm} WPM ({diff_pct:.1f}% deviation)."
-        effect = "Prolonged phonetic elongation causes audience attention to wander and disrupts rhetorical momentum."
-        recommendation = f"Pick up momentum on '{snippet}'. Maintain forward cadence while preserving clear consonant release."
+        thresh = metrics.get("configuredThreshold", "-25%")
+
+        simple_feedback = f"Your pace dragged here. Maintain forward momentum on '{snippet}'."
+        cause = f"Speaking pace dropped to {part_wpm} WPM against baseline {ref_wpm} WPM ({diff_pct:.1f}% deviation)."
+        effect = "Excessive phonetic stretching slows rhetorical momentum and causes listener focus to drift."
+        recommendation = f"Pick up tempo through '{snippet}' while keeping crisp consonant releases."
+        why_flagged = (
+            f"Measurement: Speaking Rate (WPM)\n"
+            f"Reference: {ref_wpm} WPM\n"
+            f"Participant: {part_wpm} WPM\n"
+            f"Difference: {diff_pct:.1f}%\n"
+            f"Configured Threshold: {thresh}\n"
+            f"Classification: SLOW DELIVERY\n"
+            f"Rationale: Cadence dropped below the minimum pace threshold by {abs(diff_pct) - 25:.1f}%."
+        )
 
     elif flaw_type == "MONOTONE":
-        ref_std = metrics.get("referencePitchStdHz", 34.5)
-        part_std = metrics.get("participantPitchStdHz", 11.2)
-        cause = f"Pitch modulation spread was only {part_std} Hz vs reference {ref_std} Hz (substantially flatter intonation)."
-        effect = "A flat pitch contour eliminates emotional contrast and makes pivotal arguments sound indifferent or robotic."
-        recommendation = f"Inflect upward on critical emphasis words in '{snippet}', then resolve downward at the end of the clause."
+        ref_std = metrics.get("referenceValue", 34.5)
+        part_std = metrics.get("participantValue", 11.2)
+        diff_pct = metrics.get("differencePercent", -67.5)
+        thresh = metrics.get("configuredThreshold", "-35% pitch spread")
+
+        simple_feedback = f"Your intonation was flat on this sentence. Add upward pitch inflection."
+        cause = f"Pitch modulation spread was only {part_std} Hz vs baseline {ref_std} Hz ({diff_pct:.1f}% intonation reduction)."
+        effect = "A flat vocal contour eliminates emotional contrast and makes pivotal arguments sound indifferent."
+        recommendation = f"Inflect upward on key emphasis words within '{snippet}', then resolve downward at the period."
+        why_flagged = (
+            f"Measurement: Normalized Pitch Variability (F0 Std Dev)\n"
+            f"Reference: {ref_std} Hz\n"
+            f"Participant: {part_std} Hz\n"
+            f"Relative Reduction: {abs(diff_pct):.1f}%\n"
+            f"Configured Threshold: {thresh}\n"
+            f"Classification: MONOTONE DELIVERY\n"
+            f"Rationale: Pitch spread fell below the threshold by {abs(diff_pct) - 35:.1f}%, indicating flat contour."
+        )
 
     elif flaw_type == "EXCESSIVE_PITCH_VARIATION":
-        ref_std = metrics.get("referencePitchStdHz", 28.0)
-        part_std = metrics.get("participantPitchStdHz", 64.0)
-        cause = f"Pitch variance swung up to {part_std} Hz vs reference baseline {ref_std} Hz."
-        effect = "Erratic tonal shifts sound melodramatic or uncontrolled, reducing speaker authority."
-        recommendation = f"Anchor your pitch around your natural speaking fundamental. Reserve wide pitch leaps strictly for climax moments in '{snippet}'."
+        ref_std = metrics.get("referenceValue", 28.0)
+        part_std = metrics.get("participantValue", 64.0)
+        diff_pct = metrics.get("differencePercent", 128.0)
+
+        simple_feedback = "Your pitch jumped erratically. Anchor your voice around your natural speaking tone."
+        cause = f"Pitch variance swung up to {part_std} Hz vs reference {ref_std} Hz ({diff_pct:+.1f}% elevation)."
+        effect = "Uncontrolled tonal leaps sound melodramatic or anxious, undermining speaker credibility."
+        recommendation = f"Keep your pitch stable on '{snippet}'. Reserve wide leaps exclusively for genuine rhetorical climax points."
+        why_flagged = (
+            f"Measurement: Pitch Variation Spread\n"
+            f"Reference: {ref_std} Hz\n"
+            f"Participant: {part_std} Hz\n"
+            f"Difference: {diff_pct:+.1f}%\n"
+            f"Classification: EXCESSIVE PITCH VARIATION\n"
+            f"Rationale: Pitch variance exceeded baseline stability limits."
+        )
 
     elif flaw_type == "LOW_VOLUME":
-        db_diff = metrics.get("volumeDeltaDb", -7.5)
+        db_diff = metrics.get("volumeDeltaDb", -7.6)
+        thresh = metrics.get("configuredThreshold", "-4.0 dB")
+
+        simple_feedback = f"Your voice dropped in loudness on '{snippet}'. Project more acoustic presence."
         cause = f"RMS vocal energy dropped by {abs(db_diff):.1f} dB relative to reference projection."
-        effect = "Vocal projection faded, creating a perception of uncertainty or lack of conviction."
-        recommendation = f"Support your breath from the diaphragm through '{snippet}'. Maintain consistent acoustic presence through the entire phrase."
+        effect = "Acoustic projection faded, creating an impression of uncertainty or lack of conviction."
+        recommendation = f"Engage diaphragmatic breath support through '{snippet}' so that phrase endings do not drop off."
+        why_flagged = (
+            f"Measurement: RMS Vocal Energy\n"
+            f"Volume Delta: {db_diff:.1f} dB\n"
+            f"Configured Threshold: {thresh}\n"
+            f"Classification: LOW VOLUME PROJECTION\n"
+            f"Rationale: Energy attenuation exceeded the volume threshold by {abs(db_diff) - 4.0:.1f} dB."
+        )
 
     elif flaw_type == "EXCESSIVE_VOLUME":
-        db_diff = metrics.get("volumeDeltaDb", 6.8)
-        cause = f"RMS vocal energy exceeded the baseline by +{db_diff:.1f} dB."
-        effect = "Overly intense projection risks sounding strained or harsh to the listener."
-        recommendation = f"Temper vocal force on '{snippet}'. Rely on clean articulation and pause timing rather than pure loudness."
+        db_diff = metrics.get("volumeDeltaDb", 6.4)
+        thresh = metrics.get("configuredThreshold", "+4.0 dB")
+
+        simple_feedback = "Your delivery was overly loud here. Rely on pauses rather than force."
+        cause = f"RMS vocal energy spiked +{db_diff:.1f} dB above baseline."
+        effect = "Excessive projection can sound aggressive or strained to the listener."
+        recommendation = f"Temper vocal force on '{snippet}'. Let pauses and articulation carry the emphasis."
+        why_flagged = (
+            f"Measurement: RMS Vocal Energy\n"
+            f"Volume Delta: +{db_diff:.1f} dB\n"
+            f"Configured Threshold: {thresh}\n"
+            f"Classification: EXCESSIVE VOLUME\n"
+            f"Rationale: Loudness exceeded baseline projection by {db_diff - 4.0:.1f} dB."
+        )
 
     elif flaw_type == "MISSING_PAUSE":
-        ref_p = metrics.get("referencePauseDuration", 0.52)
-        cause = f"Reference utilized a {ref_p}s rhetorical pause, whereas participant rushed directly without stopping."
-        effect = "Important syntactic separation was lost, causing two distinct arguments to blend into one another."
-        recommendation = f"Insert a clean 0.4s to 0.6s rhetorical silence immediately before '{snippet}' to frame the thought."
+        simple_feedback = f"You rushed through a natural pause. Add a breath pause before '{snippet}'."
+        cause = "Reference employed a 0.52s rhetorical pause, whereas participant rushed directly without pausing."
+        effect = "Syntactic boundaries blurred, merging two independent ideas into one run-on sentence."
+        recommendation = f"Insert a clean 0.4s to 0.6s rhetorical silence immediately before '{snippet}' to frame the idea."
+        why_flagged = (
+            f"Measurement: Rhetorical Pause Duration\n"
+            f"Reference Pause: 0.52s\n"
+            f"Participant Pause: 0.05s\n"
+            f"Classification: MISSING PAUSE\n"
+            f"Rationale: Reference pause was skipped, violating rhetorical sentence phrasing."
+        )
 
     elif flaw_type == "EXCESSIVE_PAUSE":
-        part_p = metrics.get("participantPauseDuration", 1.8)
-        cause = f"Participant paused for {part_p}s where the reference maintained fluent conversational flow."
-        effect = "Unplanned dead air creates an awkward hesitation and conveys uncertainty about the upcoming words."
-        recommendation = f"Tighten the hesitation gap before '{snippet}'. Bridge transitions smoothly without halting vocal momentum."
+        p_dur = metrics.get("participantValue", 2.2)
+        simple_feedback = "There was an awkward hesitation pause here. Keep your transitions smooth."
+        cause = f"Participant hesitated for {p_dur:.1f}s where the reference maintained steady flow."
+        effect = "Unplanned dead air conveys memory lapse or uncertainty about upcoming material."
+        recommendation = f"Tighten the transition gap before '{snippet}'. Maintain mental momentum between ideas."
+        why_flagged = (
+            f"Measurement: Silence Interval Duration\n"
+            f"Observed Silence: {p_dur:.1f}s\n"
+            f"Configured Threshold: >0.40s unexpected silence\n"
+            f"Classification: EXCESSIVE PAUSE\n"
+            f"Rationale: Silence interval exceeded normal grammatical pause duration."
+        )
 
     elif flaw_type == "INCONSISTENT_ENERGY":
-        cause = "RMS energy contour exhibited abrupt spikes and valleys compared to the steady baseline contour."
-        effect = "Unpredictable loudness fluctuations disrupt the listener's auditory comfort."
-        recommendation = f"Regulate breath support evenly across '{snippet}' so that phrase endings do not drop off abruptly."
-
-    elif flaw_type == "WEAK_EMPHASIS":
-        cause = "Participant delivery lacked the contrastive energy and pitch accent observed on the reference anchor point."
-        effect = "The focal operative word in the sentence passed unnoticed without drawing listener focus."
-        recommendation = f"Elevate both vocal pitch and dynamic stress specifically on the key operative word within '{snippet}'."
+        simple_feedback = "Your volume fluctuated unevenly across this phrase."
+        cause = "RMS energy contour showed erratic spikes and valleys compared to the steady baseline envelope."
+        effect = "Auditory comfort is reduced when volume swells and drops unpredictably."
+        recommendation = f"Maintain balanced air support across '{snippet}' for even projection."
+        why_flagged = (
+            f"Measurement: Energy Contour Variance\n"
+            f"Classification: INCONSISTENT ENERGY\n"
+            f"Rationale: Energy contour deviation exceeded steady delivery bounds."
+        )
 
     else:
-        cause = "Acoustic envelope and spectral distribution deviated significantly from the reference baseline."
-        effect = "Timbral inconsistency or resonance instability detected in this interval."
+        simple_feedback = f"Acoustic delivery diverged from baseline in '{snippet}'."
+        cause = "Spectral envelope and MFCC timbre distance deviated significantly from reference."
+        effect = "Resonance instability or timbral mismatch detected in this interval."
         recommendation = f"Deliver '{snippet}' with relaxed vocal tract resonance and focused vowel placement."
+        why_flagged = (
+            f"Measurement: Composite Acoustic Deviation\n"
+            f"Classification: ACOUSTIC DEVIATION\n"
+            f"Rationale: Overall feature distance exceeded baseline tolerance."
+        )
 
     return {
+        "simpleFeedback": simple_feedback,
         "cause": cause,
         "effect": effect,
-        "recommendation": recommendation
+        "recommendation": recommendation,
+        "whyFlagged": why_flagged
     }
 
 def enrich_flaws_with_explanations(flaws: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Enriches a list of detected flaws with comprehensive causal explanations."""
+    """Enriches detected flaws with complete causal chain, simple coaching feedback, and judge rationale."""
     enriched = []
     for f in flaws:
         exp = generate_causal_explanation(f)

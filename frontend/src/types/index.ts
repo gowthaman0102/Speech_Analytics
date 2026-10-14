@@ -28,6 +28,39 @@ export interface EvaluationSummary {
   weakestArea: string;
 }
 
+export interface ValidationDetailItem {
+  expectedType: string;
+  detectedType: string;
+  typeMatched: boolean;
+  expectedInterval: string;
+  detectedInterval: string;
+  temporalIoU: number;
+  startTimeErrorSec: number;
+  endTimeErrorSec: number;
+  status: 'DETECTED' | 'MISSED';
+  expectedSeverity: string;
+  detectedSeverity: string;
+}
+
+export interface ValidationResult {
+  totalExpected: number;
+  detectedCount: number;
+  detectionRatePct: number;
+  typeMatchRatePct: number;
+  averageTemporalIoU: number;
+  validationDetails: ValidationDetailItem[];
+}
+
+export interface AuditConfig {
+  paceThreshold: number;
+  pitchVarianceThreshold: number;
+  pauseThreshold: number;
+  energyThreshold: number;
+  minFlawDurationSec: number;
+  flawMergeGapSec: number;
+  rubricWeights: Record<string, number>;
+}
+
 export interface EvaluationDetail {
   evaluationId: string;
   title: string;
@@ -49,19 +82,21 @@ export interface EvaluationDetail {
     part_start: number;
     part_end: number;
   }>;
+  configAudit?: AuditConfig;
+  groundTruthValidation?: ValidationResult;
 }
 
 export interface FeatureTimeSeries {
   timePoints: number[];
   referenceFeatures: {
-    pitch: number[];
-    rms: number[];
-    wpm: number[];
+    pitch: (number | null)[];
+    rms: (number | null)[];
+    wpm: (number | null)[];
   };
   participantFeatures: {
-    pitch: number[];
-    rms: number[];
-    wpm: number[];
+    pitch: (number | null)[];
+    rms: (number | null)[];
+    wpm: (number | null)[];
   };
   deviations: number[];
   flawRegions: Array<{
@@ -74,9 +109,13 @@ export interface FeatureTimeSeries {
 
 export interface DatasetVariant {
   variantName: string;
+  gradientLevel?: string;
   filePath: string;
+  speedFactor?: number;
+  volumeDeltaDb?: number;
   expectedFlaw: string;
   severity: string;
+  expectedInterval?: string;
   description: string;
 }
 
@@ -85,5 +124,33 @@ export interface DatasetItem {
   title: string;
   transcript: string;
   referenceAudioPath: string;
+  expectedFlaws?: Array<{
+    type: string;
+    start: number;
+    end: number;
+    severity: string;
+    targetSentence?: string;
+    description?: string;
+  }>;
   variants: DatasetVariant[];
+}
+
+export interface BenchmarkVariantResult {
+  variantName: string;
+  gradientLevel: string;
+  expectedFlaw: string;
+  severity: string;
+  overallScore: number;
+  similarity: number;
+  detectedFlawsCount: number;
+  temporalIoU: number;
+  status: string;
+  notes: string;
+}
+
+export interface BenchmarkResponse {
+  totalEvaluated: number;
+  monotonicityPassed: boolean;
+  averageIoU: number;
+  results: BenchmarkVariantResult[];
 }

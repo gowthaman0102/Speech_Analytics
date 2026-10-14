@@ -33,11 +33,11 @@ export const Navbar: React.FC = () => {
               <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
                 SpeechScope AI
               </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                PROTOTYPE
+              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                COACH
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">Temporal Flaw & Contrastive Analytics</p>
+            <p className="text-[11px] text-slate-400 font-medium">Temporal Contrastive Speech Coach</p>
           </div>
         </Link>
 

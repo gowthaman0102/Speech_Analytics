@@ -109,10 +109,19 @@ def perform_dtw_alignment(ref_features: Dict[str, Any], part_features: Dict[str,
             dev_p = 0.1  # Unvoiced region
         pitch_deviations.append(float(dev_p))
 
-        # 2. Energy deviation (z-score difference, bounded)
+        # 2. Energy deviation (contour shape + true volume level delta)
         r_ez = ref_features["rms_z"][r_idx]
         p_ez = part_features["rms_z"][p_idx]
-        dev_e = min(2.5, abs(r_ez - p_ez)) / 2.5
+        dev_e_contour = min(2.5, abs(r_ez - p_ez)) / 2.5
+        
+        # True volume ratio in dB
+        if r_e_raw > 1e-4 and p_e_raw > 1e-4:
+            vol_db_diff = abs(20.0 * np.log10(p_e_raw / r_e_raw))
+            dev_e_level = min(1.0, vol_db_diff / 12.0)
+        else:
+            dev_e_level = 0.5 if (r_e_raw > 1e-4) != (p_e_raw > 1e-4) else 0.0
+            
+        dev_e = 0.4 * dev_e_contour + 0.6 * dev_e_level
         energy_deviations.append(float(dev_e))
 
         # 3. Speech rate deviation

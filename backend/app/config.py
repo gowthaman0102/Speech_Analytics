@@ -2,7 +2,7 @@ import os
 import shutil
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -26,6 +26,7 @@ class Settings(BaseModel):
     DATASET_DIR: Path = Path(os.getenv("DATASET_DIR", str(BASE_DIR / "dataset")))
     
     WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "base")
+    FFMPEG_PATH: Optional[str] = os.getenv("FFMPEG_PATH")
     MAX_AUDIO_DURATION: int = int(os.getenv("MAX_AUDIO_DURATION", "600"))  # 10 minutes in seconds
     MAX_FILE_SIZE_BYTES: int = int(os.getenv("MAX_FILE_SIZE_BYTES", str(50 * 1024 * 1024))) # 50 MB
     

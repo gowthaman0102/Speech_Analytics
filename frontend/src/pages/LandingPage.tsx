@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { UploadCloud } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { evaluationApi } from '../api/evaluationApi';
 
@@ -36,8 +37,9 @@ export const LandingPage: React.FC = () => {
 
           <div className="pt-2 flex items-center gap-3 flex-wrap">
             <Link to="/evaluate">
-              <Button variant="primary" size="lg">
-                Start an evaluation
+              <Button variant="primary" size="lg" className="gap-2">
+                <UploadCloud className="w-4 h-4" />
+                <span>Upload speech to evaluate</span>
               </Button>
             </Link>
             <Button
@@ -46,7 +48,7 @@ export const LandingPage: React.FC = () => {
               loading={openingSample}
               onClick={handleOpenSample}
             >
-              Open the sample evaluation
+              Open sample demo
             </Button>
           </div>
         </div>

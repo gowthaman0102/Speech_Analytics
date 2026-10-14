@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, FileAudio, FileVideo, X, AlertCircle } from 'lucide-react';
+import { UploadCloud, FileAudio, FileVideo, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from './Button';
 
 export interface DropzoneProps {
@@ -93,7 +93,20 @@ export const Dropzone: React.FC<DropzoneProps> = ({
 
   return (
     <div className={`space-y-1.5 text-left ${className}`}>
-      <span className="block text-sm font-medium text-[--text]">{label}</span>
+      {label && <span className="block text-sm font-medium text-[--text]">{label}</span>}
+
+      <input
+        ref={inputRef}
+        id="media-dropzone-input"
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            handleFile(e.target.files[0]);
+          }
+        }}
+      />
 
       {!file ? (
         <div
@@ -104,7 +117,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`relative p-6 rounded-[8px] border-2 border-dashed transition-all cursor-pointer text-center bg-[--surface] ${
+          className={`relative p-8 rounded-[8px] border-2 border-dashed transition-all cursor-pointer text-center bg-[--surface] ${
             isDragOver
               ? 'border-[--accent] bg-[--accent-soft]'
               : error
@@ -112,66 +125,85 @@ export const Dropzone: React.FC<DropzoneProps> = ({
               : 'border-[--border-strong] hover:border-[--accent] hover:bg-[--surface-2]'
           }`}
         >
-          <input
-            ref={inputRef}
-            type="file"
-            accept={accept}
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                handleFile(e.target.files[0]);
-              }
-            }}
-          />
-          <div className="flex flex-col items-center justify-center space-y-2">
-            <div className="p-2.5 rounded-full bg-[--surface-2] text-[--text-muted]">
-              <UploadCloud className="h-5 w-5" />
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <div className="p-3 rounded-full bg-[--surface-2] text-[--text-muted]">
+              <UploadCloud className="h-6 w-6 text-[--accent]" />
             </div>
             <div>
-              <p className="text-sm font-medium text-[--text]">
-                Drop speech audio or video here, or <span className="text-[--accent] underline">browse</span>
+              <p className="text-base font-semibold text-[--text]">
+                Upload your speech audio or video
               </p>
               <p className="text-xs text-[--text-muted] mt-1">{helperText}</p>
             </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                inputRef.current?.click();
+              }}
+              className="gap-2 border-[--border-strong] hover:border-[--accent] shadow-xs"
+            >
+              <UploadCloud className="h-4 w-4 text-[--accent]" />
+              <span>Choose Audio / Video File</span>
+            </Button>
           </div>
         </div>
       ) : (
-        <div className="p-4 rounded-[8px] border border-[--border] bg-[--surface] space-y-3">
+        <div className="p-5 rounded-[8px] border-2 border-emerald-500/40 bg-[--surface] space-y-4 shadow-xs">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2 rounded bg-[--accent-soft] text-[--accent] shrink-0">
-                {isVideo ? <FileVideo className="h-5 w-5" /> : <FileAudio className="h-5 w-5" />}
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 shrink-0">
+                {isVideo ? <FileVideo className="h-6 w-6" /> : <FileAudio className="h-6 w-6" />}
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-[--text] truncate">{file.name}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-[--text] truncate">{file.name}</p>
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[--surface-2] text-[--text-muted] uppercase">
                     {isVideo ? 'Video' : 'Audio'}
                   </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <CheckCircle2 className="h-3 w-3" /> Ready to Evaluate
+                  </span>
                 </div>
-                <p className="text-xs text-[--text-muted] tabular-nums mt-0.5">
+                <p className="text-xs text-[--text-muted] tabular-nums mt-1">
                   {formatFileSize(file.size)}
-                  {duration !== null && ` • ${formatDuration(duration)}`}
+                  {duration !== null && ` • Duration: ${formatDuration(duration)}`}
                 </p>
               </div>
             </div>
-            <Button
-              type="button"
-              variant="tertiary"
-              size="sm"
-              onClick={handleRemove}
-              aria-label="Remove media file"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => inputRef.current?.click()}
+                className="text-xs"
+              >
+                Change File
+              </Button>
+              <Button
+                type="button"
+                variant="tertiary"
+                size="sm"
+                onClick={handleRemove}
+                aria-label="Remove media file"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {mediaUrl && (
-            <div className="pt-2 border-t border-[--border]">
+            <div className="pt-3 border-t border-[--border]">
+              <p className="text-[11px] text-[--text-muted] font-medium mb-1.5">
+                Playback preview of your uploaded file:
+              </p>
               {isVideo ? (
-                <video src={mediaUrl} controls className="w-full max-h-48 rounded-[6px] bg-black" />
+                <video src={mediaUrl} controls className="w-full max-h-56 rounded-[6px] bg-black" />
               ) : (
-                <audio src={mediaUrl} controls className="w-full h-8" />
+                <audio src={mediaUrl} controls className="w-full h-9" />
               )}
             </div>
           )}

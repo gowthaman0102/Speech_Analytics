@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Sparkles, ChevronDown, ChevronUp, Mic, Video, PlayCircle } from 'lucide-react';
+import { FileText, Sparkles, ChevronDown, ChevronUp, Mic, Video, UploadCloud, CheckCircle2 } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { Dropzone } from '../components/ui/Dropzone';
@@ -71,7 +71,7 @@ export const NewEvaluationPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mediaFile) {
-      setError('Please provide a speech recording (audio or video) to evaluate.');
+      document.getElementById('media-dropzone-input')?.click();
       return;
     }
 
@@ -80,7 +80,7 @@ export const NewEvaluationPage: React.FC = () => {
       setError(null);
 
       const formData = new FormData();
-      formData.append('title', title.trim() || 'Speech Evaluation');
+      formData.append('title', title.trim() || mediaFile.name.replace(/\.[^/.]+$/, ''));
       formData.append('speech_type', speechType);
       formData.append('media_file', mediaFile);
       if (transcript.trim()) {
@@ -100,24 +100,18 @@ export const NewEvaluationPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-[--text] tracking-tight">
-            New Speech Evaluation
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-[--accent-soft] text-[--accent]">
+              Zero Reference Required
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[--text] tracking-tight">
+            Evaluate Your Speech Delivery
           </h1>
-          <p className="text-sm text-[--text-muted] mt-1">
-            Upload participant audio or video. SpeechScope automatically transcribes speech, analyzes communicative intent, and detects grounded delivery flaws.
+          <p className="text-sm text-[--text-muted] mt-1.5 leading-relaxed">
+            Upload your audio or video recording. SpeechScope automatically transcribes your words, classifies communicative intent, and detects grounded delivery flaws.
           </p>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={loading}
-          onClick={handleUseSampleData}
-          className="shrink-0 self-start md:self-auto gap-1.5 border-[--accent] text-[--accent]"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>Try 1-Click Sample Speech</span>
-        </Button>
       </div>
 
       {error && (
@@ -235,38 +229,60 @@ export const NewEvaluationPage: React.FC = () => {
         </div>
 
         {/* Section 4: Action Bar */}
-        <div className="pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              loading={loading}
-              disabled={!isValid}
-            >
-              {loading ? 'Starting Analysis…' : 'Analyze Speech Delivery'}
-            </Button>
+        <div className="pt-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              {mediaFile ? (
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  loading={loading}
+                  className="gap-2 bg-[--accent] text-white px-6 py-3 text-base font-semibold shadow-sm w-full sm:w-auto"
+                >
+                  <Sparkles className="h-5 w-5" />
+                  <span>Upload & Evaluate "{mediaFile.name}"</span>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  onClick={() => document.getElementById('media-dropzone-input')?.click()}
+                  className="gap-2 px-6 py-3 text-base font-semibold shadow-sm w-full sm:w-auto"
+                >
+                  <UploadCloud className="h-5 w-5" />
+                  <span>Choose Speech File to Upload</span>
+                </Button>
+              )}
+            </div>
 
             <Button
               type="button"
-              variant="secondary"
-              size="md"
+              variant="tertiary"
+              size="sm"
               disabled={loading}
-              onClick={handleUseSampleData}
+              onClick={handleReset}
             >
-              Load sample speech
+              Reset form
             </Button>
           </div>
 
-          <Button
-            type="button"
-            variant="tertiary"
-            size="sm"
-            disabled={loading}
-            onClick={handleReset}
-          >
-            Reset
-          </Button>
+          {/* Alternative Demo Option */}
+          <div className="pt-4 border-t border-[--border] flex items-center justify-between flex-wrap gap-2 text-xs text-[--text-muted]">
+            <span>
+              Don't have your own speech audio ready?
+            </span>
+            <button
+              type="button"
+              onClick={handleUseSampleData}
+              disabled={loading}
+              className="text-[--accent] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Test with built-in sample demo speech</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>

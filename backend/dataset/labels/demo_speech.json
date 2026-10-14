@@ -1,0 +1,78 @@
+{
+  "speechId": "demo_speech_001",
+  "title": "Environmental Leadership Oratory",
+  "transcript": "Good morning, members of the jury and respected audience.\nToday, we must confront the defining challenge of our time: protecting our shared global environment.\nWe cannot afford hesitation or complacency, because every passing decade reduces our margin for effective action.\nTrue leadership requires decisive commitment, scientific discipline, and unbroken perseverance.\nLet us choose responsibility today, so that tomorrow remains worthy of our hopes.",
+  "referenceAudio": "D:\\Vervathon_01\\backend\\dataset\\good\\demo_reference.wav",
+  "participantAudio": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_participant.wav",
+  "transcriptFile": "D:\\Vervathon_01\\backend\\dataset\\good\\demo_transcript.txt",
+  "expectedFlaws": [
+    {
+      "type": "RUSHED_DELIVERY",
+      "approxTime": "00:08 - 00:15",
+      "severity": "HIGH",
+      "targetSentence": "Today, we must confront the defining challenge of our time: protecting our shared global environment."
+    },
+    {
+      "type": "LOW_VOLUME",
+      "approxTime": "00:16 - 00:23",
+      "severity": "HIGH",
+      "targetSentence": "We cannot afford hesitation or complacency, because every passing decade reduces our margin for effective action."
+    },
+    {
+      "type": "EXCESSIVE_PAUSE",
+      "approxTime": "00:23 - 00:27",
+      "severity": "HIGH",
+      "targetSentence": "Mid-speech hesitation gap (2.8s)"
+    },
+    {
+      "type": "MONOTONE",
+      "approxTime": "00:32 - 00:40",
+      "severity": "MEDIUM",
+      "targetSentence": "Let us choose responsibility today, so that tomorrow remains worthy of our hopes."
+    }
+  ],
+  "variants": [
+    {
+      "variantName": "Rushed Delivery (1.35x)",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_rushed_1.35x.wav",
+      "expectedFlaw": "RUSHED_DELIVERY",
+      "severity": "HIGH",
+      "description": "Artificially accelerated speech cadence (+35% speed), decreasing rhetorical pause duration."
+    },
+    {
+      "variantName": "Slow Delivery (0.75x)",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_slow_0.75x.wav",
+      "expectedFlaw": "SLOW_DELIVERY",
+      "severity": "HIGH",
+      "description": "Significantly dragged pace (-25% speed), elongating vowel phonemes and losing momentum."
+    },
+    {
+      "variantName": "Low Volume Projection (-10 dB)",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_low_volume_-10dB.wav",
+      "expectedFlaw": "LOW_VOLUME",
+      "severity": "HIGH",
+      "description": "10 dB acoustic attenuation creating faint vocal presence and degraded audibility."
+    },
+    {
+      "variantName": "Excessive Pause Hesitation (2.2s)",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_excessive_pause.wav",
+      "expectedFlaw": "EXCESSIVE_PAUSE",
+      "severity": "HIGH",
+      "description": "Unnatural 2.2-second dead air inserted mid-speech, breaking rhetorical continuity."
+    },
+    {
+      "variantName": "Monotone Intonation",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_monotone.wav",
+      "expectedFlaw": "MONOTONE",
+      "severity": "MEDIUM",
+      "description": "Suppressed pitch variability and dynamic compression creating a flat contour."
+    },
+    {
+      "variantName": "Near-Perfect Delivery (1.04x)",
+      "filePath": "D:\\Vervathon_01\\backend\\dataset\\flawed\\demo_reference_near_perfect_1.04x.wav",
+      "expectedFlaw": "NONE",
+      "severity": "LOW",
+      "description": "Mild 4% natural tempo variation representing an excellent competitive delivery."
+    }
+  ]
+}
